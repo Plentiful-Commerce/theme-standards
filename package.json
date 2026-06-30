@@ -1,0 +1,42 @@
+{
+  "name": "@plentiful/theme-standards",
+  "version": "0.1.0",
+  "description": "Canonical lint/format/Theme Check configs and the custom pc-lint checks for Plentiful Commerce Shopify theme repos.",
+  "type": "module",
+  "bin": {
+    "pc-lint": "./scripts/pc-lint.mjs"
+  },
+  "exports": {
+    "./prettier": "./prettier.json",
+    "./eslint": "./eslint/index.cjs",
+    "./stylelint": "./stylelint/index.json",
+    "./theme-check": "./theme-check/index.yml",
+    "./rules/liquid-checks.mjs": "./rules/liquid-checks.mjs",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "prettier.json",
+    "eslint",
+    "stylelint",
+    "theme-check",
+    "rules",
+    "templates",
+    "scripts",
+    "CODING-STANDARDS.md"
+  ],
+  "peerDependencies": {
+    "@babel/eslint-parser": "^7.23.0",
+    "@shopify/prettier-plugin-liquid": "^1.5.0",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "prettier": "^3.3.0",
+    "stylelint": "^16.0.0",
+    "stylelint-config-standard": "^36.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@shopify/prettier-plugin-liquid": { "optional": false },
+    "stylelint-config-standard": { "optional": false }
+  },
+  "license": "UNLICENSED",
+  "private": true
+}

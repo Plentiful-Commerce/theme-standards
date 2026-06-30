@@ -1,0 +1,18 @@
+{
+  "extends": ["stylelint-config-standard"],
+  "rules": {
+    "declaration-property-unit-disallowed-list": [
+      { "font-size": ["px"] },
+      {
+        "severity": "warning",
+        "message": "Use rem/em/% for font-size, not px (CODING-STANDARDS A8)"
+      }
+    ],
+    "declaration-no-important": [true, { "severity": "warning" }],
+    "no-descending-specificity": null,
+    "selector-class-pattern": null,
+    "custom-property-pattern": null,
+    "keyframes-name-pattern": null,
+    "value-keyword-case": null
+  }
+}

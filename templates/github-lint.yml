@@ -1,0 +1,87 @@
+# Copy to a repo as `.github/workflows/lint.yml`.
+# PR-blocking quality gate — the deterministic backstop that does NOT trust the
+# build agent (CODING-STANDARDS Part E). Pin Node to an even LTS.
+#
+# Strategy: BLOCK on what the PR changes (so an agent must fix anything it
+# touches), but don't fail on pre-existing legacy debt in untouched files.
+# A whole-repo warn pass keeps total debt visible.
+#
+# Note: this template is npm-based. For the Encore/yarn theme family, swap
+# `npm ci` -> `yarn install` and `npm run` -> `yarn` (ubuntu-latest ships yarn).
+name: Lint
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  assets:
+    name: Format + ESLint + Stylelint + pc-lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history so we can diff against the PR base
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      # ESLint (errors only) and Stylelint (px/!important are warnings) — safe
+      # whole-repo since they don't fail on warnings.
+      - run: npm run lint
+      - run: npm run lint:css
+
+      # Blocking on changed files: formatting + custom checks must be clean for
+      # anything this PR touches.
+      - name: Prettier + pc-lint (changed files — blocking)
+        if: github.event_name == 'pull_request'
+        run: |
+          CHANGED=$(git diff --name-only --diff-filter=d "origin/${{ github.base_ref }}...HEAD" \
+            | grep -E '\.(js|json|css|scss|liquid)$' || true)
+          echo "Changed files:"; echo "$CHANGED"
+          if [ -n "$CHANGED" ]; then
+            npx prettier --check $CHANGED
+            node scripts/pc-lint.mjs --files $CHANGED
+          else
+            echo "No relevant changed files."
+          fi
+
+      # Visibility: whole-repo legacy debt, reported without failing the build.
+      - name: pc-lint (whole repo — warn-only)
+        run: node scripts/pc-lint.mjs --warn
+
+      # Advisory: hardcoded values that duplicate a CSS token, on changed files.
+      # Colors are reliable; lengths are a nudge — so warn-only. Promote colors
+      # to blocking with: pc-design-tokens.mjs --files $CHANGED --strict --colors-only
+      - name: Design tokens (changed files — advisory)
+        if: github.event_name == 'pull_request'
+        run: |
+          CHANGED=$(git diff --name-only --diff-filter=d "origin/${{ github.base_ref }}...HEAD" \
+            | grep -E '\.(css|scss|liquid)$' || true)
+          if [ -n "$CHANGED" ]; then node scripts/pc-design-tokens.mjs --files $CHANGED; fi
+
+  theme-check:
+    name: Shopify Theme Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history so we can diff against the PR base
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # Modern Node-based Theme Check via Shopify CLI (the Ruby gem
+      # `Shopify/theme-check-action` is abandoned and fails to install).
+      # One run -> JSON, reused for both the summary and the gate.
+      - name: Run Theme Check
+        run: npx --yes @shopify/cli@latest theme check --output json > tc.json 2>/dev/null || true
+      - name: Summary (whole repo — non-blocking)
+        run: node -e 'const d=require("./tc.json");const o=d.flatMap(f=>f.offenses||[]);const s={};o.forEach(x=>s[x.severity]=(s[x.severity]||0)+1);console.log("Theme Check whole-repo offenses:",JSON.stringify(s))'
+      # Blocking: fail on any Liquid offense (warning+) the PR INTRODUCES
+      # (line-scoped) — e.g. a new img_url — without red-walling legacy.
+      - name: Block on introduced offenses (PR)
+        if: github.event_name == 'pull_request'
+        run: node scripts/theme-check-changed.mjs tc.json --diff-base "origin/${{ github.base_ref }}" --fail-level warning

@@ -1,0 +1,47 @@
+# @plentiful/theme-standards — shared Shopify Theme Check config.
+#
+# Consume from a repo's `.theme-check.yml`:
+#   extends: '@plentiful/theme-standards/theme-check'
+#   # repo-specific overrides below, if any
+#
+# Starts from the recommended ruleset and applies the PC baseline thresholds
+# (carried over from the existing client configs) plus the audit-tool's must-run
+# CSS-subsetting check. Asset-size budgets stay off — PC themes manage those via
+# the monthly audit, not as a commit gate.
+extends: theme-check:recommended
+
+# --- Liquid quality thresholds (PC baseline) ---
+TemplateLength:
+  enabled: true
+  max_length: 600
+  exclude_schema: true
+  exclude_stylesheet: true
+  exclude_javascript: true
+
+NestedSnippet:
+  enabled: true
+  max_nesting_level: 3
+
+PaginationSize:
+  enabled: true
+  min_size: 1
+  max_size: 50
+
+SchemaJsonFormat:
+  enabled: true
+  start_indent: 0
+  indent: 2
+
+# --- CSS subsetting: must-run per the audit tool (CODING-STANDARDS A7) ---
+ValidScopedCSSClass:
+  enabled: true
+
+# --- Asset-size budgets: handled by the monthly audit, not the commit gate ---
+AssetSizeJavaScript:
+  enabled: false
+AssetSizeCSS:
+  enabled: false
+AssetSizeAppBlockJavaScript:
+  enabled: false
+AssetSizeAppBlockCSS:
+  enabled: false

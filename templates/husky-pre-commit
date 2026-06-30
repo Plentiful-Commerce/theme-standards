@@ -1,0 +1,31 @@
+#!/usr/bin/env sh
+# Copy to a repo as `.husky/pre-commit` (husky v9 format — no sourcing line needed).
+
+# Format + lint only the staged files.
+npx lint-staged
+
+# Theme Check on staged Liquid — fails the commit on any offense (warning+) you
+# INTRODUCE (line-scoped), e.g. a deprecated img_url filter. Requires the Shopify
+# CLI: if Liquid is staged and the CLI is missing, the commit is blocked (don't
+# silently skip the gate). For instant inline feedback, also install the Shopify
+# Liquid / Theme Check IDE extension. Slow commits? Remove this block — CI still enforces.
+if git diff --cached --name-only --diff-filter=d | grep -qE '\.liquid$'; then
+  if ! command -v shopify >/dev/null 2>&1; then
+    echo "✗ This commit changes Liquid but the Shopify CLI is not installed."
+    echo "  Install it (brew install shopify-cli) so Theme Check can run, then retry."
+    echo "  Or bypass this once with: git commit --no-verify"
+    exit 1
+  fi
+  TCJSON=$(mktemp)
+  shopify theme check --output json > "$TCJSON" 2>/dev/null || true
+  if ! node scripts/theme-check-changed.mjs "$TCJSON" --staged --fail-level warning; then
+    rm -f "$TCJSON"
+    echo "Commit blocked by Theme Check. Fix the above, or bypass with: git commit --no-verify"
+    exit 1
+  fi
+  rm -f "$TCJSON"
+fi
+
+# PC convention: never commit locally-rebuilt bundles — keep the committed
+# (CI-built) version. Discards local changes to entry-* without deleting them.
+git checkout -- 'assets/entry-*' >/dev/null 2>&1 || true

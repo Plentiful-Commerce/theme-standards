@@ -1,0 +1,7 @@
+{
+  "_comment": "Merge into the repo's package.json under a \"lint-staged\" key.",
+  "*.{js,json,css,scss,liquid}": "prettier --write",
+  "*.js": "eslint --fix",
+  "*.{css,scss}": "stylelint --fix",
+  "*.liquid": "shopify theme check"
+}
