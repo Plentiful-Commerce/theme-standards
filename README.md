@@ -68,37 +68,35 @@ Adoption is deliberately lenient on legacy. Once a repo's whole-repo `--warn` pa
 
 ## Adopting it in a repo
 
-**1. Install** (peer deps + this package):
+**1. Install** (the package is a PUBLIC git dep — no auth — plus peer deps):
 
 ```bash
-npm i -D @plentiful/theme-standards \
+npm i -D "github:Plentiful-Commerce/theme-standards#v0.1.1" \
   eslint@^8.57.0 @babel/eslint-parser eslint-config-prettier \
   prettier @shopify/prettier-plugin-liquid \
   stylelint stylelint-config-standard \
   husky lint-staged
 ```
+(yarn: `yarn add -D "github:Plentiful-Commerce/theme-standards#v0.1.1" …`.)
 
-**2. Add the four config files** to the repo root:
+**2. Add the config files** to the repo root:
 
-```jsonc
-// .prettierrc.json
-"@plentiful/theme-standards/prettier"
-```
 ```js
-// .eslintrc.cjs
-module.exports = { root: true, extends: ['@plentiful/theme-standards/eslint'] };
+// .eslintrc.cjs — require.resolve is REQUIRED: ESLint's legacy resolver
+// doesn't honor package "exports", so a bare extends string fails.
+module.exports = { root: true, extends: [require.resolve('@plentiful/theme-standards/eslint')] };
 ```
 ```json
 // .stylelintrc.json
 { "extends": "@plentiful/theme-standards/stylelint" }
 ```
-```yaml
-# .theme-check.yml
-extends: '@plentiful/theme-standards/theme-check'
+Point Prettier at the shared config via `package.json`:
+```json
+"prettier": "@plentiful/theme-standards/prettier"
 ```
-Copy `templates/editorconfig` → `.editorconfig`.
+Copy `templates/editorconfig` → `.editorconfig`, and copy `theme-check/index.yml` → `.theme-check.yml` (Theme Check doesn't reliably resolve npm-package `extends`, so copy it rather than extend).
 
-**3. Add the standardized scripts** (CODING-STANDARDS B7) to `package.json`:
+**3. Add the standardized scripts** (CODING-STANDARDS B7) to `package.json` — scripts run via the package bins (`npx`):
 
 ```jsonc
 "scripts": {
@@ -109,7 +107,7 @@ Copy `templates/editorconfig` → `.editorconfig`.
   "format:check": "prettier --check .",
   // local convenience check — pc-lint in --warn so legacy debt doesn't block.
   // CI does the real diff-scoped blocking (see Enforcement model above).
-  "check": "npm run lint && node scripts/pc-lint.mjs --warn"
+  "check": "npm run lint && pc-lint --warn"
 }
 ```
 `npm run check` is the quick local pass; the **CI gate** in `lint.yml` is what actually blocks (on the PR diff). Once the repo's whole-repo `--warn` pass is clean, drop `--warn` here to make it blocking too.

@@ -9,10 +9,7 @@
 # Note: this template is npm-based. For the Encore/yarn theme family, swap
 # `npm ci` -> `yarn install` and `npm run` -> `yarn` (ubuntu-latest ships yarn).
 #
-# @plentiful/theme-standards is a PRIVATE dep. CI needs read access: set an
-# org-level Actions secret THEME_STANDARDS_TOKEN (a token with Contents:read on
-# the theme-standards repo) and keep the `git config insteadOf` step below so
-# the install can fetch it over https.
+# @plentiful/theme-standards is a PUBLIC repo, so it installs with no auth.
 name: Lint
 
 on:
@@ -32,8 +29,6 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      # Auth for the private @plentiful/theme-standards dep (Option B).
-      - run: git config --global url."https://x-access-token:${{ secrets.THEME_STANDARDS_TOKEN }}@github.com/".insteadOf "https://github.com/"
       - run: npm ci
 
       # ESLint (errors only) and Stylelint (px/!important are warnings) — safe
