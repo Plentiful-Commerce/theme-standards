@@ -2,6 +2,20 @@
 
 Canonical lint/format/Theme Check configs + the custom `pc-lint` checks for every Plentiful Commerce Shopify theme repo. One source of truth so configs stop drifting repo-to-repo. Implements [CODING-STANDARDS.md](./CODING-STANDARDS.md) (Parts A & B); see Part D for the rollout and Part E for the agent/CI model.
 
+## For developers (start here)
+
+**What runs when you `git commit`** (pre-commit hook, local):
+- Prettier / ESLint / Stylelint auto-**fix** your staged files (formatting — doesn't block).
+- If you staged `.liquid`: **Theme Check** runs and **blocks the commit** on any offense you *introduced* (e.g. `img_url`, missing `alt`). Needs the Shopify CLI installed (`brew install shopify-cli`) — if it's missing and you staged Liquid, the commit is blocked with a hint.
+
+**What runs when you open/update a PR** (CI — the real gate, can't be skipped):
+- ESLint (blocks on errors), **`pc-lint`** (blocks on error-severity rules in files you changed), **Theme Check** (blocks on offenses you introduced), design-token check (advisory).
+- It **only blocks on what your PR changes** — pre-existing legacy debt in untouched files stays a warning, so it won't red-wall unrelated work.
+
+**When it fails:** read the message — it names the file, line, and fix. Fix it and push. For a genuine one-off, `git commit --no-verify` skips the *local* hook (CI still enforces). CI must be green to merge.
+
+**Adopting a new repo:** follow [Adopting it in a repo](#adopting-it-in-a-repo) below. **Changing a rule:** edit it once here (in `rules/liquid-checks.mjs` or the config files), tag a new version, bump the dep in each repo — the gate and the audit tool both read from this one place.
+
 ## What's in here
 
 | Path | Purpose |
