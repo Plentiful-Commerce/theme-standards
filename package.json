@@ -37,9 +37,18 @@
     "stylelint-config-standard": "^36.0.0"
   },
   "peerDependenciesMeta": {
-    "@shopify/prettier-plugin-liquid": { "optional": false },
-    "stylelint-config-standard": { "optional": false }
+    "@shopify/prettier-plugin-liquid": {
+      "optional": false
+    },
+    "stylelint-config-standard": {
+      "optional": false
+    }
   },
   "license": "UNLICENSED",
-  "private": true
+  "private": true,
+  "devDependencies": {
+    "chrome-launcher": "^1.2.1",
+    "lighthouse": "^13.4.0",
+    "puppeteer-core": "^25.3.0"
+  }
 }

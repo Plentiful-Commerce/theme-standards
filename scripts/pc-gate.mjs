@@ -36,7 +36,7 @@
  *      don't ask the agent to "fix" code
  */
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, writeFileSync, rmSync, readFileSync } from 'node:fs';
 import { join, resolve, extname, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -47,6 +47,10 @@ const args = process.argv.slice(2);
 const has = (f) => args.includes(f);
 const opt = (f) => (args.indexOf(f) === -1 ? null : args[args.indexOf(f) + 1]);
 const JSON_OUT = has('--json') || !process.stdout.isTTY;
+const RENDER = has('--render');
+const STORE = opt('--store');
+const ROUTES = opt('--routes'); // csv; default resolved in the render stage
+const BASELINE = opt('--baseline-url');
 
 const flagIdx = (f) => args.indexOf(f);
 const filesOverride = (() => {
@@ -222,8 +226,69 @@ if (!infra) {
   }
 }
 
-// 7–9 — rendered layer: not implemented yet (see PC-GATE-SPEC.md §7–9).
-record('render', 'skip', { blocking: false, detail: 'rendered layer (stages 7–9) not yet implemented' });
+// 7–9 — rendered layer (opt-in via --render). Pushes an unpublished preview
+// theme, then runs pc-render (headless load + Lighthouse). Only worth doing once
+// static passes, so it's gated on the earlier stages. See PC-GATE-SPEC.md §7–9.
+function detectStore() {
+  if (STORE) return STORE;
+  if (process.env.SHOPIFY_FLAG_STORE) return process.env.SHOPIFY_FLAG_STORE;
+  // parse `--store <handle>` out of any npm script (e.g. shopify:dev)
+  const pkg = join(CWD, 'package.json');
+  if (!existsSync(pkg)) return null;
+  try {
+    const raw = readFileSync(pkg, 'utf8');
+    const m = raw.match(/--store[= ]([a-z0-9-]+)/i);
+    return m ? m[1] : null;
+  } catch { return null; }
+}
+function parsePreview(jsonText) {
+  let data;
+  try { data = JSON.parse(jsonText); } catch { return null; }
+  let url = null, id = null;
+  const visit = (o) => {
+    if (!o || typeof o !== 'object') return;
+    for (const [k, v] of Object.entries(o)) {
+      if (k === 'preview_url' && typeof v === 'string') url = v;
+      if (k === 'id' && (typeof v === 'number' || typeof v === 'string')) id = v;
+      if (v && typeof v === 'object') visit(v);
+    }
+  };
+  visit(data);
+  return url ? { preview_url: url, id } : null;
+}
+
+if (!RENDER) {
+  record('render', 'skip', { blocking: false, detail: 'rendered layer off — pass --render to enable' });
+} else if (infra || blockingFailed) {
+  record('render', 'skip', { blocking: false, detail: 'static stages must pass before rendering' });
+} else if (!hasBin('shopify')) {
+  record('render', 'infra', { detail: 'Shopify CLI not installed — cannot push preview theme' });
+} else {
+  const store = detectStore();
+  if (!store) {
+    record('render', 'infra', { detail: 'no store — pass --store or set SHOPIFY_FLAG_STORE' });
+  } else {
+    // Name the preview theme so the push doesn't prompt (fatal non-interactively)
+    // and so orphaned previews are easy to reap (pc-gate/<branch>).
+    const branch = sh('git', ['rev-parse', '--abbrev-ref', 'HEAD']).out.trim() || 'detached';
+    const themeName = `pc-gate/${branch}`.slice(0, 50);
+    log(`  pushing unpublished preview "${themeName}" to ${store} …`);
+    const push = sh(bin('shopify'), ['theme', 'push', '--unpublished', '--json', '--store', store, '--theme', themeName]);
+    const info = parsePreview(push.out);
+    if (!info) {
+      record('render', 'infra', { detail: `theme push produced no preview_url\n${trim(push.out + push.err, 1500)}` });
+    } else {
+      const routes = ROUTES || '/,/collections/all';
+      const rArgs = [pkgScript('pc-render.mjs'), '--base-url', info.preview_url, '--routes', routes, '--json'];
+      if (BASELINE) rArgs.push('--baseline-url', BASELINE);
+      const r = sh('node', rArgs);
+      // reap the preview theme we created (best effort — orchestrator also reaps)
+      if (info.id != null) sh(bin('shopify'), ['theme', 'delete', '-t', String(info.id), '--store', store, '-f']);
+      const status = r.code === 0 ? 'pass' : r.code === 2 ? 'infra' : 'fail';
+      record('render', status, { blocking: true, detail: status === 'pass' ? null : r.out + r.err });
+    }
+  }
+}
 
 // ── verdict ─────────────────────────────────────────────────────────────
 let verdict, nextAction, exitCode;
