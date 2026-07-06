@@ -21,6 +21,7 @@ import { runAll } from '../rules/liquid-checks.mjs';
 
 const args = process.argv.slice(2);
 const WARN_ONLY = args.includes('--warn');
+const JSON_OUT = args.includes('--json');
 const filesIdx = args.indexOf('--files');
 const FILES = filesIdx === -1 ? null : args.slice(filesIdx + 1).filter((a) => !a.startsWith('--'));
 const ROOT = resolve(
@@ -86,13 +87,27 @@ if (FILES) {
 
 const errors = violations.filter((x) => x.severity === 'error');
 const scopeLabel = FILES ? `${FILES.length} changed file(s)` : 'whole repo';
+const blocking = !WARN_ONLY && errors.length > 0;
+
+// Machine-readable mode for pc-gate: emit findings as JSON only, still signal
+// blocking via exit code.
+if (JSON_OUT) {
+  const findings = violations.map((x) => ({
+    rule: x.rule,
+    severity: x.severity,
+    file: String(x.path).replace(ROOT + '/', '').replace(ROOT, '.'),
+    line: x.line,
+    message: x.detail,
+  }));
+  console.log(JSON.stringify(findings));
+  process.exit(blocking ? 1 : 0);
+}
 
 if (violations.length === 0) {
   console.log(`pc-lint: ✓ no violations (${scopeLabel})`);
   process.exit(0);
 }
 
-const blocking = !WARN_ONLY && errors.length > 0;
 const mark = blocking ? '✗' : '⚠';
 console.error(
   `pc-lint: ${mark} ${violations.length} violation(s) in ${scopeLabel} — ${errors.length} error, ${violations.length - errors.length} warning${WARN_ONLY ? ' (warn-only)' : ''}\n`

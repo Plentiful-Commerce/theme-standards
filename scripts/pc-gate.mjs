@@ -139,13 +139,32 @@ const stages = [];
 let blockingFailed = false;
 let infra = null;
 
-/** record a stage; `status`: pass | fail | warn | skip | infra */
-function record(id, status, { blocking = true, detail = null } = {}) {
-  stages.push({ id, status, blocking, detail: detail ? trim(detail) : null });
+/** record a stage; `status`: pass | fail | warn | skip | infra.
+ *  `findings` (optional) is a structured array [{file,line,rule,message}] the
+ *  agent can act on directly; `detail` is the raw fallback text. */
+function record(id, status, { blocking = true, detail = null, findings = null } = {}) {
+  const s = { id, status, blocking, detail: detail ? trim(detail) : null };
+  if (findings && findings.length) s.findings = findings;
+  stages.push(s);
   if (status === 'fail' && blocking) blockingFailed = true;
   if (status === 'infra') infra = id;
   const mark = { pass: '✓', fail: '✗', warn: '⚠', skip: '·', infra: '✗' }[status];
   log(`  ${mark} ${id}${status === 'skip' ? ' (n/a)' : ''}`);
+}
+
+// Parse eslint's --format json into flat findings.
+function eslintFindings(jsonText) {
+  try {
+    return JSON.parse(jsonText).flatMap((f) =>
+      (f.messages || []).map((m) => ({
+        file: f.filePath.replace(CWD + '/', ''),
+        line: m.line ?? null,
+        rule: m.ruleId || (m.fatal ? 'parse-error' : null),
+        message: m.message,
+        severity: m.severity === 2 ? 'error' : 'warning',
+      }))
+    );
+  } catch { return null; }
 }
 
 // 1 — prettier --check
@@ -163,8 +182,12 @@ if (!infra) {
   if (jsFiles.length === 0) record('eslint', 'skip');
   else if (!hasBin('eslint')) record('eslint', 'infra', { detail: 'eslint not installed' });
   else {
-    const r = sh(bin('eslint'), jsFiles);
-    record('eslint', r.code === 0 ? 'pass' : 'fail', { detail: r.code === 0 ? null : r.out + r.err });
+    const r = sh(bin('eslint'), ['--format', 'json', ...jsFiles]);
+    const findings = r.code === 0 ? null : eslintFindings(r.out);
+    record('eslint', r.code === 0 ? 'pass' : 'fail', {
+      findings,
+      detail: r.code === 0 ? null : findings ? null : r.out + r.err,
+    });
   }
 }
 
@@ -182,8 +205,13 @@ if (!infra) {
 if (!infra) {
   if (pcLintFiles.length === 0) record('pc-lint', 'skip');
   else {
-    const r = sh('node', [pkgScript('pc-lint.mjs'), '--files', ...pcLintFiles]);
-    record('pc-lint', r.code === 0 ? 'pass' : 'fail', { detail: r.code === 0 ? null : r.out + r.err });
+    const r = sh('node', [pkgScript('pc-lint.mjs'), '--files', ...pcLintFiles, '--json']);
+    let findings = null;
+    try { findings = JSON.parse(r.out).filter((f) => f.severity === 'error'); } catch { /* fall back to text */ }
+    record('pc-lint', r.code === 0 ? 'pass' : 'fail', {
+      findings,
+      detail: r.code === 0 ? null : findings ? null : r.out + r.err,
+    });
   }
 }
 
