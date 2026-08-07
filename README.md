@@ -9,7 +9,7 @@ Canonical lint/format/Theme Check configs + the custom `pc-lint` checks for ever
 - If you staged `.liquid`: **Theme Check** runs and **blocks the commit** on any offense you *introduced* (e.g. `img_url`, missing `alt`). Needs the Shopify CLI installed (`brew install shopify-cli`) — if it's missing and you staged Liquid, the commit is blocked with a hint.
 
 **What runs when you open/update a PR** (CI — the real gate, can't be skipped):
-- ESLint (blocks on errors), **`pc-lint`** (blocks on error-severity rules in files you changed), **Theme Check** (blocks on offenses you introduced), design-token check (advisory).
+- ESLint and Stylelint (block on errors), **Prettier `--check`** (blocks on files you changed), **`pc-lint`** (blocks on error-severity rules in files you changed), **Theme Check** (blocks on offenses you introduced), design-token check (advisory).
 - It **only blocks on what your PR changes** — pre-existing legacy debt in untouched files stays a warning, so it won't red-wall unrelated work.
 
 **When it fails:** read the message — it names the file, line, and fix. Fix it and push. For a genuine one-off, `git commit --no-verify` skips the *local* hook (CI still enforces). CI must be green to merge.
@@ -82,6 +82,12 @@ Adoption is deliberately lenient on legacy. Once a repo's whole-repo `--warn` pa
 
 ## Adopting it in a repo
 
+> **Prerequisite: Node 22+.** `@babel/eslint-parser@8` requires `node ^22.18.0 || >=24.11.0`.
+> Adopting the standard therefore raises the repo's Node floor — **bump every workflow in
+> `.github/workflows/`, not just `lint.yml`**, and bump `.nvmrc`. A stale `node-version` in an
+> unrelated workflow (e.g. an asset-compile job) will start failing at `yarn install` the moment
+> this lands, and re-running it won't help — a re-run replays the *old* workflow file.
+
 **1. Install** (the package is a PUBLIC git dep — no auth — plus peer deps):
 
 ```bash
@@ -108,7 +114,11 @@ Point Prettier at the shared config via `package.json`:
 ```json
 "prettier": "@plentiful/theme-standards/prettier"
 ```
-Copy `templates/editorconfig` → `.editorconfig`, and copy `theme-check/index.yml` → `.theme-check.yml` (Theme Check doesn't reliably resolve npm-package `extends`, so copy it rather than extend).
+Copy `templates/editorconfig` → `.editorconfig`.
+
+Copy `theme-check/index.yml` → `.theme-check.yml` (Theme Check doesn't reliably resolve npm-package `extends`, so copy it rather than extend). **If the repo already has a `.theme-check.yml`, overwrite it — don't leave the legacy one in place.** Most existing theme repos ship a hand-rolled `extends: :nothing` config with an explicit rule list; keeping it means the gate silently runs against a non-standard ruleset and you lose `theme-check:recommended` plus `ValidScopedCSSClass` (must-run per CODING-STANDARDS A7). Re-add any genuinely repo-specific bits (e.g. an `ignore:` list) at the bottom of the copied file, under a clearly marked overrides heading.
+
+Expect the canonical config to surface **more** offenses than the legacy one. That's the point — they're pre-existing debt, they don't block (the whole-repo pass is warn-only and the gate is diff-scoped), and they belong on a debt ticket.
 
 **3. Add the standardized scripts** (CODING-STANDARDS B7) to `package.json` — scripts run via the package bins (`npx`):
 
@@ -128,7 +138,7 @@ Copy `templates/editorconfig` → `.editorconfig`, and copy `theme-check/index.y
 
 **4. Wire up hooks + CI:**
 - Copy `templates/husky-pre-commit` → `.husky/pre-commit` (run `npx husky init` first on fresh repos), and merge `templates/lint-staged.json` into `package.json` under `"lint-staged"`.
-- Copy `templates/github-lint.yml` → `.github/workflows/lint.yml`.
+- Copy `templates/github-lint.yml` → `.github/workflows/lint.yml`. The template is npm-based; for the Encore/yarn theme family swap `npm ci` → `yarn install` and `npm run X` → `yarn X`. **Keep every step when you adapt it** — the Prettier `--check` and Stylelint steps are easy to drop in the rewrite, and losing them silently removes two blocking gates.
 
 **5. Point the build agent at the standards** — in the repo's `.claude/CLAUDE.md` (Tier 2 import, CODING-STANDARDS Part E):
 

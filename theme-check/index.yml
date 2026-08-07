@@ -1,8 +1,9 @@
 # @plentiful/theme-standards — shared Shopify Theme Check config.
 #
-# Consume from a repo's `.theme-check.yml`:
-#   extends: '@plentiful/theme-standards/theme-check'
-#   # repo-specific overrides below, if any
+# COPY this file to a repo as `.theme-check.yml`, overwriting any existing one.
+# Do NOT try to `extends: '@plentiful/theme-standards/theme-check'` — Theme Check
+# doesn't reliably resolve npm-package extends. Put repo-specific overrides
+# (e.g. `ignore:`) at the bottom of the copy, under a marked heading.
 #
 # Starts from the recommended ruleset and applies the PC baseline thresholds
 # (carried over from the existing client configs) plus the audit-tool's must-run
