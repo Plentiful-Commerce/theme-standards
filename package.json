@@ -1,12 +1,13 @@
 {
   "name": "@plentiful/theme-standards",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Canonical lint/format/Theme Check configs and the custom pc-lint checks for Plentiful Commerce Shopify theme repos.",
   "type": "module",
   "bin": {
     "pc-lint": "./scripts/pc-lint.mjs",
     "theme-check-changed": "./scripts/theme-check-changed.mjs",
-    "pc-design-tokens": "./scripts/pc-design-tokens.mjs"
+    "pc-design-tokens": "./scripts/pc-design-tokens.mjs",
+    "pc-gate": "./scripts/pc-gate.mjs"
   },
   "exports": {
     "./prettier": "./prettier.json",
@@ -36,9 +37,18 @@
     "stylelint-config-standard": "^36.0.0"
   },
   "peerDependenciesMeta": {
-    "@shopify/prettier-plugin-liquid": { "optional": false },
-    "stylelint-config-standard": { "optional": false }
+    "@shopify/prettier-plugin-liquid": {
+      "optional": false
+    },
+    "stylelint-config-standard": {
+      "optional": false
+    }
   },
   "license": "UNLICENSED",
-  "private": true
+  "private": true,
+  "devDependencies": {
+    "chrome-launcher": "^1.2.1",
+    "lighthouse": "^13.4.0",
+    "puppeteer-core": "^25.3.0"
+  }
 }
