@@ -1,6 +1,8 @@
 # Copy to a repo as `.github/workflows/lint.yml`.
 # PR-blocking quality gate — the deterministic backstop that does NOT trust the
-# build agent (CODING-STANDARDS Part E). Pin Node to an even LTS.
+# build agent (CODING-STANDARDS Part E). Node 22 is the floor, not a preference:
+# @babel/eslint-parser@8 requires ^22.18.0 || >=24.11.0. Bump the repo's OTHER
+# workflows to match — they'll fail at install otherwise.
 #
 # Strategy: BLOCK on what the PR changes (so an agent must fix anything it
 # touches), but don't fail on pre-existing legacy debt in untouched files.
@@ -8,6 +10,8 @@
 #
 # Note: this template is npm-based. For the Encore/yarn theme family, swap
 # `npm ci` -> `yarn install` and `npm run` -> `yarn` (ubuntu-latest ships yarn).
+# Keep every step when you adapt it — dropping the Prettier `--check` or
+# Stylelint steps silently removes two blocking gates.
 #
 # @plentiful/theme-standards is a PUBLIC repo, so it installs with no auth.
 name: Lint
