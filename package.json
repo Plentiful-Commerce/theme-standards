@@ -1,6 +1,6 @@
 {
   "name": "@plentiful/theme-standards",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Canonical lint/format/Theme Check configs and the custom pc-lint checks for Plentiful Commerce Shopify theme repos.",
   "type": "module",
   "bin": {
@@ -40,5 +40,8 @@
     "stylelint-config-standard": { "optional": false }
   },
   "license": "UNLICENSED",
-  "private": true
+  "private": true,
+  "scripts": {
+    "test": "node --test \"test/*.test.mjs\""
+  }
 }

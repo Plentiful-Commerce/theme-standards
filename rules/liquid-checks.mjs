@@ -26,6 +26,75 @@ export const RULES = {
   'sale-css-dated': { severity: 'warning', title: 'Dated sale CSS', message: 'Remove date-stamped sale CSS when the sale ends' },
 };
 
+/**
+ * Inline suppression, mirroring Theme Check's convention so the two gates read
+ * the same way. Put the directive in whatever comment syntax the file already
+ * uses — Liquid, HTML, JS or CSS — it is matched as plain text:
+ *
+ *   {%- # pc-lint-disable liquid-include -%}      ... {%- # pc-lint-enable liquid-include -%}
+ *   {%- # pc-lint-disable-next-line liquid-include -%}
+ *
+ * Naming one or more rules scopes the suppression to those rules; naming none
+ * suppresses every rule. Always pair a region `disable` with an `enable` and
+ * keep it as tight as possible — an unclosed `disable` silences the rest of the
+ * file. A suppressed occurrence does NOT mask a later un-suppressed one: each
+ * rule keeps scanning and reports the first occurrence that is still live.
+ */
+const ALL = '*';
+
+function ruleNamesFrom(tail) {
+  const names = (tail.match(/[a-z][a-z0-9-]*/g) || []).filter((n) => Object.hasOwn(RULES, n));
+  return names.length ? names : [ALL];
+}
+
+export function parseDisables(content) {
+  const lines = String(content).split('\n');
+  const nextLine = new Map(); // line -> Set(rule)
+  const open = new Map(); // rule -> start line
+  const regions = []; // {rule, from, to}
+
+  lines.forEach((text, i) => {
+    const lineNo = i + 1;
+    let m;
+    if ((m = /pc-lint-disable-next-line([^\n]*)/.exec(text))) {
+      const set = nextLine.get(lineNo + 1) || new Set();
+      for (const r of ruleNamesFrom(m[1])) set.add(r);
+      nextLine.set(lineNo + 1, set);
+      return; // a -next-line directive is never also a region directive
+    }
+    if ((m = /pc-lint-enable([^\n]*)/.exec(text))) {
+      for (const r of ruleNamesFrom(m[1])) {
+        if (open.has(r)) {
+          regions.push({ rule: r, from: open.get(r), to: lineNo });
+          open.delete(r);
+        }
+      }
+      return;
+    }
+    if ((m = /pc-lint-disable([^\n]*)/.exec(text))) {
+      for (const r of ruleNamesFrom(m[1])) if (!open.has(r)) open.set(r, lineNo);
+    }
+  });
+  for (const [rule, from] of open) regions.push({ rule, from, to: lines.length + 1 });
+
+  return function isDisabled(rule, line) {
+    const nl = nextLine.get(line);
+    if (nl && (nl.has(rule) || nl.has(ALL))) return true;
+    return regions.some((r) => (r.rule === rule || r.rule === ALL) && line >= r.from && line <= r.to);
+  };
+}
+
+// First occurrence of `re` whose line is not suppressed. Keeps the historical
+// one-violation-per-rule output shape while honouring inline disables.
+function firstLive(re, content, isDisabled, rule) {
+  const g = new RegExp(re.source, re.flags.includes('g') ? re.flags : re.flags + 'g');
+  for (const m of content.matchAll(g)) {
+    const line = lineOf(content, m.index);
+    if (!isDisabled(rule, line)) return { index: m.index, line };
+  }
+  return null;
+}
+
 const HERO = ['slideshow', 'image-banner', 'hero', 'banner'];
 const NON_CRITICAL_CSS = ['carousel.css', 'mini-cart', 'swiper.css'];
 const lineOf = (content, idx) => (idx < 0 ? 1 : content.slice(0, idx).split('\n').length);
@@ -34,17 +103,18 @@ const v = (rule, path, line, detail) => ({ rule, severity: RULES[rule].severity,
 // Per-file Liquid checks (sections, snippets, theme.liquid).
 export function checkLiquidFile(path, content) {
   const out = [];
+  const isDisabled = parseDisables(content);
   const isSection = /(^|\/)sections\//.test(path);
   const isTheme = /(^|\/)layout\/theme\.liquid$/.test(path);
 
-  let m = /\{%-?\s*include\s+/.exec(content);
-  if (m) out.push(v('liquid-include', path, lineOf(content, m.index)));
-  m = /document\.write/.exec(content);
-  if (m) out.push(v('document-write', path, lineOf(content, m.index)));
+  let m = firstLive(/\{%-?\s*include\s+/, content, isDisabled, 'liquid-include');
+  if (m) out.push(v('liquid-include', path, m.line));
+  m = firstLive(/document\.write/, content, isDisabled, 'document-write');
+  if (m) out.push(v('document-write', path, m.line));
 
   if (isSection) {
-    m = /stylesheet_tag/.exec(content);
-    if (m) out.push(v('stylesheet-tag-in-section', path, lineOf(content, m.index)));
+    m = firstLive(/stylesheet_tag/, content, isDisabled, 'stylesheet-tag-in-section');
+    if (m) out.push(v('stylesheet-tag-in-section', path, m.line));
     for (const block of content.match(/<style[\s\S]*?<\/style>/gi) || []) {
       if (block.includes('{%') || block.includes('{{')) {
         out.push(v('dynamic-style-block', path, lineOf(content, content.indexOf(block))));
@@ -93,19 +163,20 @@ export function checkLiquidFile(path, content) {
       }
     }
   }
-  return out;
+  return out.filter((x) => !isDisabled(x.rule, x.line));
 }
 
 // Custom CSS file checks (monolithic size, dated sale blocks).
 export function checkCssFile(path, content, anySectionUsesStylesheet) {
   const out = [];
   if (!/custom[\w-]*\.css$/i.test(path)) return out;
+  const isDisabled = parseDisables(content);
   const lines = content.split('\n').length;
   if (lines > 500) out.push(v('monolithic-css', path, 1, `${lines} lines — likely holds section-specific CSS`));
   else if (lines > 300 && !anySectionUsesStylesheet) out.push(v('monolithic-css', path, 1, `${lines} lines and no section uses {% stylesheet %}`));
   const dated = content.match(/\/\*[^*]*\d{1,2}[-/]\d{1,2}[-/]\d{2,4}[^*]*\*\//g) || [];
   if (dated.length) out.push(v('sale-css-dated', path, 1, `${dated.length} date-stamped block(s) — verify still active`));
-  return out;
+  return out.filter((x) => !isDisabled(x.rule, x.line));
 }
 
 // browserslist must exclude IE. Flag only IE *inclusions* — `not ie <= 11` is fine.

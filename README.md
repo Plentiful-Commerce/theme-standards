@@ -77,6 +77,36 @@ node scripts/pc-lint.mjs --files a b c   # only the listed files, blocking — t
 
 CI computes the changed files (`git diff --name-only "origin/$BASE...HEAD"`) and passes them to `--files`.
 
+### Suppressing a `pc-lint` rule inline
+
+Some rules are right in general and wrong in one specific place — usually where an
+app or vendor snippet forces our hand. Suppress those in the file, the same way
+Theme Check does, so the exemption sits next to the code and carries its reason:
+
+```liquid
+{%- comment -%}
+  MUST stay `include`: this snippet resolves a DYNAMIC snippet name, which only
+  works under `include`. Switching to `render` silently drops the CSS.
+{%- endcomment -%}
+{%- # pc-lint-disable liquid-include -%}
+{% include 'pagefly-app-header' %}
+{%- # pc-lint-enable liquid-include -%}
+```
+
+- `pc-lint-disable <rule>` … `pc-lint-enable <rule>` suppresses a region.
+- `pc-lint-disable-next-line <rule>` suppresses the next line only.
+- Naming several rules (comma or space separated) scopes to those rules; naming
+  **none** suppresses every rule — avoid that.
+- The directive is matched as plain text, so use whatever comment syntax the file
+  already uses (Liquid, HTML, JS or CSS).
+
+Two deliberate properties: an **unclosed `disable` runs to end of file**, so always
+pair it and keep the region tight; and a suppressed occurrence **does not mask a
+later one** — each rule keeps scanning and reports the first violation still live.
+
+Always write *why* next to the directive. A suppression without a reason is
+indistinguishable from someone silencing a rule they did not want to fix.
+
 ### Tightening over time
 Adoption is deliberately lenient on legacy. Once a repo's whole-repo `--warn` pass is clean, flip the gate to strict: run `pc-lint` (no `--warn`) whole-repo as blocking, and raise `theme check` to `--fail-level=error`. Stylelint's `px`/`!important` warnings can likewise be promoted to `error`.
 
