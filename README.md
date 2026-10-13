@@ -115,7 +115,7 @@ Adoption is deliberately lenient on legacy. Once a repo's whole-repo `--warn` pa
 > **Prerequisite: Node 22+.** `@babel/eslint-parser@8` requires `node ^22.18.0 || >=24.11.0`.
 > Adopting the standard therefore raises the repo's Node floor — **bump every workflow in
 > `.github/workflows/`, not just `lint.yml`**, and bump `.nvmrc`. A stale `node-version` in an
-> unrelated workflow (e.g. an asset-compile job) will start failing at `yarn install` the moment
+> unrelated workflow (e.g. an asset-compile job) will start failing at `npm ci` the moment
 > this lands, and re-running it won't help — a re-run replays the *old* workflow file.
 
 **1. Install** (the package is a PUBLIC git dep — no auth — plus peer deps):
@@ -127,7 +127,7 @@ npm i -D "github:Plentiful-Commerce/theme-standards#v0.1.1" \
   stylelint stylelint-config-standard \
   husky lint-staged
 ```
-(yarn: `yarn add -D "github:Plentiful-Commerce/theme-standards#v0.1.1" …`.)
+Commit the resulting `package-lock.json`. Every PC repo uses npm; do not add a `yarn.lock`.
 
 **2. Add the config files** to the repo root:
 
@@ -168,7 +168,7 @@ Expect the canonical config to surface **more** offenses than the legacy one. Th
 
 **4. Wire up hooks + CI:**
 - Copy `templates/husky-pre-commit` → `.husky/pre-commit` (run `npx husky init` first on fresh repos), and merge `templates/lint-staged.json` into `package.json` under `"lint-staged"`.
-- Copy `templates/github-lint.yml` → `.github/workflows/lint.yml`. The template is npm-based; for the Encore/yarn theme family swap `npm ci` → `yarn install` and `npm run X` → `yarn X`. **Keep every step when you adapt it** — the Prettier `--check` and Stylelint steps are easy to drop in the rewrite, and losing them silently removes two blocking gates.
+- Copy `templates/github-lint.yml` → `.github/workflows/lint.yml`. Use it as written: every PC repo installs with `npm ci` against a committed `package-lock.json`. **Keep every step** — the Prettier `--check` and Stylelint steps are blocking gates.
 
 **5. Point the build agent at the standards** — in the repo's `.claude/CLAUDE.md` (Tier 2 import, CODING-STANDARDS Part E):
 
