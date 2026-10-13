@@ -219,7 +219,8 @@ How a **code-implementation agent** (running in GitHub Actions or a VPS, headles
 
 **Mechanism — import, don't copy.** Each repo's `.claude/CLAUDE.md`:
 ```markdown
-@./node_modules/@plentiful/theme-standards/CODING-STANDARDS.md
+@../node_modules/@plentiful/theme-standards/REPO-GUIDE.md
+@../node_modules/@plentiful/theme-standards/CODING-STANDARDS.md
 # Repo-specific notes below (Tier 3)…
 ```
 The merged result the agent reads is **assembled from the checked-out repo** — never from a laptop's `~/.claude` or local memory.

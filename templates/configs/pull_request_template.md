@@ -27,7 +27,7 @@ does not fix it.
 To repair the preview theme:  npm run preview:fix
 For routine visual QA:        npm run shopify:dev   (unaffected)
 
-Full explanation in CLAUDE.md.
+Full explanation in the repo guide loaded by `.claude/CLAUDE.md`.
 
 NOTE (setup-repo): this block applies only to themes with a settings-driven
 .css.liquid. Delete it for Focal / Dawn / any OS 2.0 theme — and if the repo has
