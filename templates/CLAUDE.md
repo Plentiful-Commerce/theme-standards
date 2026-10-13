@@ -86,7 +86,7 @@ For routine visual QA prefer `npm run shopify:dev`, which is unaffected.
 
 ## Node Version
 
-Use Node 25.3.0 (see `.nvmrc`)
+Use Node 22 (see `.nvmrc`)
 
 ## File Modification Guidelines
 

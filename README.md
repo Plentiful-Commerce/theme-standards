@@ -131,6 +131,11 @@ what new repos get, change the file here.
 | `configs/preview-fix.mjs` | `scripts/preview-fix.mjs` | Repairs a branch-preview theme's CSS (themes with a settings-driven `.css.liquid` only) |
 | `CLAUDE.md`, `claude-project.md`, `settings.json` | `CLAUDE.md`, `.claude/` | Agent instructions and permissions for the repo |
 
+Three pieces apply only to themes with a settings-driven `.css.liquid` stylesheet (Turbo and
+other vintage-era themes), and `/setup-repo` leaves them out for everything else:
+`configs/preview-fix.mjs`, the branch-preview warning in `configs/pull_request_template.md`, and
+the section of `CLAUDE.md` marked `CONDITIONAL`.
+
 Every repo uses npm: `npm ci` in CI against a committed `package-lock.json`.
 
 ## Adopting it in a repo
