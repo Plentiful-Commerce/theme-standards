@@ -1,0 +1,86 @@
+name: Compile Assets
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - master
+      - main
+
+jobs:
+  # Runs the repo's build code, so it gets no credentials that can push.
+  build:
+    runs-on: ubuntu-latest
+    # The publish job's deploy-key push triggers this workflow again; skip that run.
+    # Match the author too, so a person reusing the message is not skipped.
+    if: ${{ !(github.event.head_commit.message == 'Compiled assets for production' && github.event.head_commit.author.name == 'CI/CD') }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build for Production
+        run: |
+          npm run build
+
+      - name: List output files
+        run: ls -l assets
+
+      - name: Upload compiled assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: compiled-assets
+          path: assets/entry-*
+          if-no-files-found: error
+          # Long enough to re-run a failed publish job a few days later.
+          retention-days: 5
+
+  # Holds the deploy key, so it must never run code from the repo:
+  # no install, no build, only git.
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    # The deploy key lives in this environment, which only the default branch can use.
+    environment: compile-assets
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # Push as the compile-assets deploy key, which the branch ruleset lets through.
+          ssh-key: ${{ secrets.COMPILE_ASSETS_DEPLOY_KEY }}
+
+      - name: Download compiled assets
+        uses: actions/download-artifact@v4
+        with:
+          name: compiled-assets
+          path: assets
+
+      - name: Configure Git
+        run: |
+          git config --global user.email "bot@plentifulcommerce.com"
+          git config --global user.name "CI/CD"
+
+      - name: Commit and push if changed
+        run: |
+          git add -f assets/entry-*
+          if git diff --cached --quiet; then
+            echo "No compiled asset changes"
+            exit 0
+          fi
+          git commit -m "Compiled assets for production"
+          # Shopify may have committed since checkout; replay on top of it.
+          git pull --rebase origin "${{ github.ref_name }}"
+          git push origin "HEAD:${{ github.ref_name }}"
