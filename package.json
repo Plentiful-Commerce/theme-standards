@@ -1,6 +1,6 @@
 {
   "name": "@plentiful/theme-standards",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Canonical lint/format/Theme Check configs and the custom pc-lint checks for Plentiful Commerce Shopify theme repos.",
   "type": "module",
   "bin": {
@@ -24,7 +24,8 @@
     "rules",
     "templates",
     "scripts",
-    "CODING-STANDARDS.md"
+    "CODING-STANDARDS.md",
+    "REPO-GUIDE.md"
   ],
   "peerDependencies": {
     "@babel/eslint-parser": "^7.23.0",

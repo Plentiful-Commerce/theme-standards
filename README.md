@@ -28,8 +28,9 @@ Canonical lint/format/Theme Check configs + the custom `pc-lint` checks for ever
 | `scripts/pc-lint.mjs` | Thin wrapper that runs `rules/liquid-checks.mjs` and blocks on error-severity violations (warnings advise). 13 rules: include, document.write, stylesheet_tag-in-section, dual-tracking, duplicate-script, browserslist-IE, tracking-before-charset, content_for_header, hero-lazyload, dynamic-style-block, monolithic-css, inline-JS, render-blocking-CSS, dated sale CSS |
 | `scripts/theme-check-changed.mjs` | Diff-scopes Shopify Theme Check to offenses on **added lines** — the introduced-only Liquid/SEO/a11y gate |
 | `scripts/pc-design-tokens.mjs` | Flags a hardcoded value that duplicates a CSS token (`#372305 → var(--color-chocolate)`). Property-aware; colors reliable, lengths advisory. Warn-first |
-| `templates/` | Every file `/setup-repo` copies into a new theme repo: build config, `package.json`, the three CI workflows, husky `pre-commit`, ignore files, `CLAUDE.md`. See [Repo templates](#repo-templates). |
-| `CODING-STANDARDS.md` | The standards this package enforces (the canonical copy repos `@import` into CLAUDE.md) |
+| `templates/` | Every file `/setup-repo` copies into a new theme repo: build config, `package.json`, the three CI workflows, husky `pre-commit`, ignore files, `.claude/CLAUDE.md`. See [Repo templates](#repo-templates). |
+| `CODING-STANDARDS.md` | The standards this package enforces (the canonical copy repos `@import` into `.claude/CLAUDE.md`) |
+| `REPO-GUIDE.md` | How every theme repo is laid out and worked in: commands, build pipeline, git workflow. Imported next to the standards, so no repo holds its own copy |
 
 ## Enforcement model — when does each check run?
 
@@ -129,12 +130,12 @@ what new repos get, change the file here.
 | `configs/CODEOWNERS`, `pull_request_template.md` | `.github/` | Review ownership and the PR template |
 | `configs/pre-commit` | `.husky/pre-commit` | lint-staged plus line-scoped Theme Check |
 | `configs/preview-fix.mjs` | `scripts/preview-fix.mjs` | Repairs a branch-preview theme's CSS (themes with a settings-driven `.css.liquid` only) |
-| `CLAUDE.md`, `claude-project.md`, `settings.json` | `CLAUDE.md`, `.claude/` | Agent instructions and permissions for the repo |
+| `claude-project.md`, `settings.json` | `.claude/CLAUDE.md`, `.claude/settings.json` | The repo's own facts plus the two imports, and agent permissions. There is no root `CLAUDE.md` |
 
 Three pieces apply only to themes with a settings-driven `.css.liquid` stylesheet (Turbo and
 other vintage-era themes), and `/setup-repo` leaves them out for everything else:
 `configs/preview-fix.mjs`, the branch-preview warning in `configs/pull_request_template.md`, and
-the section of `CLAUDE.md` marked `CONDITIONAL`.
+the line of `claude-project.md` marked `CONDITIONAL`.
 
 Every repo uses npm: `npm ci` in CI against a committed `package-lock.json`.
 
@@ -198,11 +199,14 @@ Expect the canonical config to surface **more** offenses than the legacy one. Th
 - Copy `templates/configs/pre-commit` → `.husky/pre-commit` (run `npx husky init` first on fresh repos), and copy the `"lint-staged"` block from `templates/configs/package.json` into the repo's `package.json`.
 - Copy `templates/configs/github-lint.yml` → `.github/workflows/lint.yml`. Use it as written: every PC repo installs with `npm ci` against a committed `package-lock.json`. **Keep every step** — the Prettier `--check` and Stylelint steps are blocking gates.
 
-**5. Point the build agent at the standards** — in the repo's `.claude/CLAUDE.md` (Tier 2 import, CODING-STANDARDS Part E):
+**5. Point the build agent at the standards** — copy `templates/claude-project.md` → `.claude/CLAUDE.md` and fill in the placeholders (Tier 2 import, CODING-STANDARDS Part E). It imports both shared files:
 
 ```markdown
-@./node_modules/@plentiful/theme-standards/CODING-STANDARDS.md
+@../node_modules/@plentiful/theme-standards/REPO-GUIDE.md
+@../node_modules/@plentiful/theme-standards/CODING-STANDARDS.md
 ```
+
+The paths start with `../` because an import resolves relative to the file that contains it, and that file is inside `.claude/`. `@./node_modules/...` points at `.claude/node_modules` and loads nothing. Do not add a root `CLAUDE.md`: anything generic belongs in `REPO-GUIDE.md` here, and anything specific to the repo goes under "Notes for this repo only".
 
 ## Notes
 
