@@ -8,8 +8,7 @@
 # touches), but don't fail on pre-existing legacy debt in untouched files.
 # A whole-repo warn pass keeps total debt visible.
 #
-# Note: this template is npm-based. For the Encore/yarn theme family, swap
-# `npm ci` -> `yarn install` and `npm run` -> `yarn` (ubuntu-latest ships yarn).
+# Installs with `npm ci`, so the repo must commit its package-lock.json.
 # Keep every step when you adapt it — dropping the Prettier `--check` or
 # Stylelint steps silently removes two blocking gates.
 #
