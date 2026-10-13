@@ -1,0 +1,3 @@
+# Consumes @plentiful/theme-standards via a filesystem path (Shopify Theme Check
+# does not resolve package-name `extends` like ESLint). Requires npm install.
+extends: ./node_modules/@plentiful/theme-standards/theme-check/index.yml

@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm:*)",
+      "Bash(shopify theme:*)",
+      "Bash(git:*)",
+      "Bash(ls:*)",
+      "Bash(node:*)"
+    ],
+    "deny": []
+  }
+}

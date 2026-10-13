@@ -1,0 +1,22 @@
+# Update [CLIENT_SLUG] and [STORE_URL] per client.
+# CLIENT_SLUG must match the key in plentiful-automation clients.json.
+
+name: Monthly Audit
+
+on:
+  schedule:
+    - cron: "0 9 1 * *" # 1st of every month at 9am UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  id-token: write
+jobs:
+  audit:
+    uses: Plentiful-Commerce/plentiful-automation/.github/workflows/audit-and-implement.yml@main
+    with:
+      client: [CLIENT_SLUG]
+      url: [STORE_URL]
+    secrets: inherit

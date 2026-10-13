@@ -28,7 +28,7 @@ Canonical lint/format/Theme Check configs + the custom `pc-lint` checks for ever
 | `scripts/pc-lint.mjs` | Thin wrapper that runs `rules/liquid-checks.mjs` and blocks on error-severity violations (warnings advise). 13 rules: include, document.write, stylesheet_tag-in-section, dual-tracking, duplicate-script, browserslist-IE, tracking-before-charset, content_for_header, hero-lazyload, dynamic-style-block, monolithic-css, inline-JS, render-blocking-CSS, dated sale CSS |
 | `scripts/theme-check-changed.mjs` | Diff-scopes Shopify Theme Check to offenses on **added lines** — the introduced-only Liquid/SEO/a11y gate |
 | `scripts/pc-design-tokens.mjs` | Flags a hardcoded value that duplicates a CSS token (`#372305 → var(--color-chocolate)`). Property-aware; colors reliable, lengths advisory. Warn-first |
-| `templates/` | Copy-in files: `.editorconfig`, husky `pre-commit`, `lint-staged`, CI `lint.yml` |
+| `templates/` | Every file `/setup-repo` copies into a new theme repo: build config, `package.json`, the three CI workflows, husky `pre-commit`, ignore files, `CLAUDE.md`. See [Repo templates](#repo-templates). |
 | `CODING-STANDARDS.md` | The standards this package enforces (the canonical copy repos `@import` into CLAUDE.md) |
 
 ## Enforcement model — when does each check run?
@@ -110,6 +110,34 @@ indistinguishable from someone silencing a rule they did not want to fix.
 ### Tightening over time
 Adoption is deliberately lenient on legacy. Once a repo's whole-repo `--warn` pass is clean, flip the gate to strict: run `pc-lint` (no `--warn`) whole-repo as blocking, and raise `theme check` to `--fail-level=error`. Stylelint's `px`/`!important` warnings can likewise be promoted to `error`.
 
+## Repo templates
+
+`templates/` is the single source for the files a PC theme repo starts with. The `/setup-repo`
+command copies them from a local checkout of this repo; nothing else holds a copy. To change
+what new repos get, change the file here.
+
+| Path | Copied to | What it is |
+|---|---|---|
+| `configs/package.json` | `package.json` | Scripts, dependencies, `lint-staged`, `packageManager` and `engines` |
+| `configs/webpack.config.js`, `postcss.config.js`, `tailwind.config.js` | repo root | The Webpack Encore build |
+| `configs/.nvmrc` | `.nvmrc` | Node 22, matching CI |
+| `configs/.eslintrc.js`, `.stylelintrc.json`, `.theme-check.yml`, `.editorconfig` | repo root | One-line files that point at the shared configs in this package |
+| `configs/.gitignore`, `.shopifyignore` | repo root | Ignore lists; `package-lock.json` is tracked, other lockfiles are ignored |
+| `configs/github-lint.yml` | `.github/workflows/lint.yml` | The PR-blocking quality gate |
+| `configs/github-compile-assets.yml` | `.github/workflows/compile-assets.yml` | Builds and commits `assets/entry-*` on the default branch |
+| `configs/github-monthly-audit.yml` | `.github/workflows/monthly-audit.yml` | Scheduled audit |
+| `configs/CODEOWNERS`, `pull_request_template.md` | `.github/` | Review ownership and the PR template |
+| `configs/pre-commit` | `.husky/pre-commit` | lint-staged plus line-scoped Theme Check |
+| `configs/preview-fix.mjs` | `scripts/preview-fix.mjs` | Repairs a branch-preview theme's CSS (themes with a settings-driven `.css.liquid` only) |
+| `CLAUDE.md`, `claude-project.md`, `settings.json` | `CLAUDE.md`, `.claude/` | Agent instructions and permissions for the repo |
+
+Three pieces apply only to themes with a settings-driven `.css.liquid` stylesheet (Turbo and
+other vintage-era themes), and `/setup-repo` leaves them out for everything else:
+`configs/preview-fix.mjs`, the branch-preview warning in `configs/pull_request_template.md`, and
+the section of `CLAUDE.md` marked `CONDITIONAL`.
+
+Every repo uses npm: `npm ci` in CI against a committed `package-lock.json`.
+
 ## Adopting it in a repo
 
 > **Prerequisite: Node 22+.** `@babel/eslint-parser@8` requires `node ^22.18.0 || >=24.11.0`.
@@ -144,9 +172,9 @@ Point Prettier at the shared config via `package.json`:
 ```json
 "prettier": "@plentiful/theme-standards/prettier"
 ```
-Copy `templates/editorconfig` → `.editorconfig`.
+Copy `templates/configs/.editorconfig` → `.editorconfig`.
 
-Copy `theme-check/index.yml` → `.theme-check.yml` (Theme Check doesn't reliably resolve npm-package `extends`, so copy it rather than extend). **If the repo already has a `.theme-check.yml`, overwrite it — don't leave the legacy one in place.** Most existing theme repos ship a hand-rolled `extends: :nothing` config with an explicit rule list; keeping it means the gate silently runs against a non-standard ruleset and you lose `theme-check:recommended` plus `ValidScopedCSSClass` (must-run per CODING-STANDARDS A7). Re-add any genuinely repo-specific bits (e.g. an `ignore:` list) at the bottom of the copied file, under a clearly marked overrides heading.
+Copy `templates/configs/.theme-check.yml` → `.theme-check.yml`. It is a three-line file that extends `theme-check/index.yml` by filesystem path (`./node_modules/@plentiful/theme-standards/theme-check/index.yml`), because Theme Check does not resolve package-name `extends`. Two consequences: dependencies must be installed before Theme Check runs, locally and in CI (the `lint.yml` template runs `npm ci` in the Theme Check job for this reason), and the ruleset updates with the package version. **If the repo already has a `.theme-check.yml`, overwrite it — don't leave the legacy one in place.** Most existing theme repos ship a hand-rolled `extends: :nothing` config with an explicit rule list; keeping it means the gate silently runs against a non-standard ruleset and you lose `theme-check:recommended` plus `ValidScopedCSSClass` (must-run per CODING-STANDARDS A7). Add any genuinely repo-specific bits (e.g. an `ignore:` list) below the `extends` line, under a clearly marked overrides heading.
 
 Expect the canonical config to surface **more** offenses than the legacy one. That's the point — they're pre-existing debt, they don't block (the whole-repo pass is warn-only and the gate is diff-scoped), and they belong on a debt ticket.
 
@@ -167,8 +195,8 @@ Expect the canonical config to surface **more** offenses than the legacy one. Th
 `npm run check` is the quick local pass; the **CI gate** in `lint.yml` is what actually blocks (on the PR diff). Once the repo's whole-repo `--warn` pass is clean, drop `--warn` here to make it blocking too.
 
 **4. Wire up hooks + CI:**
-- Copy `templates/husky-pre-commit` → `.husky/pre-commit` (run `npx husky init` first on fresh repos), and merge `templates/lint-staged.json` into `package.json` under `"lint-staged"`.
-- Copy `templates/github-lint.yml` → `.github/workflows/lint.yml`. Use it as written: every PC repo installs with `npm ci` against a committed `package-lock.json`. **Keep every step** — the Prettier `--check` and Stylelint steps are blocking gates.
+- Copy `templates/configs/pre-commit` → `.husky/pre-commit` (run `npx husky init` first on fresh repos), and copy the `"lint-staged"` block from `templates/configs/package.json` into the repo's `package.json`.
+- Copy `templates/configs/github-lint.yml` → `.github/workflows/lint.yml`. Use it as written: every PC repo installs with `npm ci` against a committed `package-lock.json`. **Keep every step** — the Prettier `--check` and Stylelint steps are blocking gates.
 
 **5. Point the build agent at the standards** — in the repo's `.claude/CLAUDE.md` (Tier 2 import, CODING-STANDARDS Part E):
 
