@@ -1,12 +1,15 @@
 {
   "name": "@plentiful/theme-standards",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Canonical lint/format/Theme Check configs and the custom pc-lint checks for Plentiful Commerce Shopify theme repos.",
   "type": "module",
   "bin": {
     "pc-lint": "./scripts/pc-lint.mjs",
     "theme-check-changed": "./scripts/theme-check-changed.mjs",
-    "pc-design-tokens": "./scripts/pc-design-tokens.mjs"
+    "pc-design-tokens": "./scripts/pc-design-tokens.mjs",
+    "pc-repo-check": "./scripts/pc-repo-check.mjs",
+    "pc-pr-template": "./scripts/pc-pr-template.mjs",
+    "pc-pr-body-check": "./scripts/pc-pr-body-check.mjs"
   },
   "exports": {
     "./prettier": "./prettier.json",
