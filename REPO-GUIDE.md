@@ -56,6 +56,20 @@ Use Node 22 (see `.nvmrc`). Do not use yarn or pnpm, and do not add another lock
 - The Shopify GitHub integration pushes theme-editor saves to the default branch as
   `Update from Shopify` commits. Expect to pull before pushing.
 
+## Opening a pull request
+
+- Branch name: `CU-{taskId}_{Task-Name}_{Assignee-Name}`. Title: the exact ClickUp task name.
+- Body: the org PR template. It lives only in `Plentiful-Commerce/.github`, and GitHub applies it
+  only in the web form; `gh pr create --body` and the API skip it. Fetch it and fill in every
+  section:
+
+  ```bash
+  gh api repos/Plentiful-Commerce/.github/contents/pull_request_template.md --jq .content | base64 --decode
+  ```
+
+- Do not add a `.github/pull_request_template.md` to the repo. It would replace the org template
+  for this repo.
+
 ## Working with Liquid
 
 **Sections** (`sections/*.liquid`):
