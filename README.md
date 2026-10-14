@@ -29,6 +29,8 @@ Canonical lint/format/Theme Check configs + the custom `pc-lint` checks for ever
 | `scripts/theme-check-changed.mjs` | Diff-scopes Shopify Theme Check to offenses on **added lines** — the introduced-only Liquid/SEO/a11y gate |
 | `scripts/pc-design-tokens.mjs` | Flags a hardcoded value that duplicates a CSS token (`#372305 → var(--color-chocolate)`). Property-aware; colors reliable, lengths advisory. Warn-first |
 | `scripts/pc-repo-check.mjs` | Fails CI when the repo drifts from the PC shape: a repo-level PR template, a `yarn.lock` / `pnpm-lock.yaml` or no `package-lock.json`, a root `CLAUDE.md`, or a `.claude/CLAUDE.md` without the two imports. Checks tracked files only. Blocking |
+| `scripts/pc-pr-template.mjs` | Prints the org PR template from `Plentiful-Commerce/.github`, for agents opening PRs with `gh pr create --body-file` |
+| `scripts/pc-pr-body-check.mjs` | Fails a PR whose description doesn't follow the org template: every section filled in, a ClickUp link or N/A, a ticked Type of change. Reads the template live, so section changes in the org repo need no release here. Blocking |
 | `templates/` | Every file `/setup-repo` copies into a new theme repo: build config, `package.json`, the three CI workflows, husky `pre-commit`, ignore files, `.claude/CLAUDE.md`. See [Repo templates](#repo-templates). |
 | `CODING-STANDARDS.md` | The standards this package enforces (the canonical copy repos `@import` into `.claude/CLAUDE.md`) |
 | `REPO-GUIDE.md` | How every theme repo is laid out and worked in: commands, build pipeline, git workflow. Imported next to the standards, so no repo holds its own copy |
@@ -128,6 +130,7 @@ what new repos get, change the file here.
 | `configs/github-lint.yml` | `.github/workflows/lint.yml` | The PR-blocking quality gate |
 | `configs/github-compile-assets.yml` | `.github/workflows/compile-assets.yml` | Builds and commits `assets/entry-*` on the default branch |
 | `configs/github-monthly-audit.yml` | `.github/workflows/monthly-audit.yml` | Scheduled audit |
+| `configs/github-pr-body.yml` | `.github/workflows/pr-body.yml` | Runs `pc-pr-body-check` on every PR, and again when its description is edited |
 | `configs/CODEOWNERS`, `pull_request_template.md` | `.github/` | Review ownership and the PR template |
 | `configs/pre-commit` | `.husky/pre-commit` | lint-staged plus line-scoped Theme Check |
 | `configs/preview-fix.mjs` | `scripts/preview-fix.mjs` | Repairs a branch-preview theme's CSS (themes with a settings-driven `.css.liquid` only) |

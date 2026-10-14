@@ -7,7 +7,9 @@
     "pc-lint": "./scripts/pc-lint.mjs",
     "theme-check-changed": "./scripts/theme-check-changed.mjs",
     "pc-design-tokens": "./scripts/pc-design-tokens.mjs",
-    "pc-repo-check": "./scripts/pc-repo-check.mjs"
+    "pc-repo-check": "./scripts/pc-repo-check.mjs",
+    "pc-pr-template": "./scripts/pc-pr-template.mjs",
+    "pc-pr-body-check": "./scripts/pc-pr-body-check.mjs"
   },
   "exports": {
     "./prettier": "./prettier.json",
