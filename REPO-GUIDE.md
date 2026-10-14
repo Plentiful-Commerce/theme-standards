@@ -67,8 +67,10 @@ Use Node 22 (see `.nvmrc`). Do not use yarn or pnpm, and do not add another lock
   gh api repos/Plentiful-Commerce/.github/contents/pull_request_template.md --jq .content | base64 --decode
   ```
 
-- Do not add a `.github/pull_request_template.md` to the repo. It would replace the org template
-  for this repo.
+- CI's `pc-repo-check` step fails if the repo contains its own PR template, because that would
+  replace the org template. The same check enforces `package-lock.json` as the only lockfile and
+  `.claude/CLAUDE.md` as the only agent-instructions file. Run `npx pc-repo-check` locally to
+  see what it reports.
 
 ## Working with Liquid
 
