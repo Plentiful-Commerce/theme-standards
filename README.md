@@ -127,15 +127,17 @@ what new repos get, change the file here.
 | `configs/github-lint.yml` | `.github/workflows/lint.yml` | The PR-blocking quality gate |
 | `configs/github-compile-assets.yml` | `.github/workflows/compile-assets.yml` | Builds and commits `assets/entry-*` on the default branch |
 | `configs/github-monthly-audit.yml` | `.github/workflows/monthly-audit.yml` | Scheduled audit |
-| `configs/CODEOWNERS`, `pull_request_template.md` | `.github/` | Review ownership and the PR template |
+| `configs/CODEOWNERS` | `.github/CODEOWNERS` | Review ownership |
 | `configs/pre-commit` | `.husky/pre-commit` | lint-staged plus line-scoped Theme Check |
 | `configs/preview-fix.mjs` | `scripts/preview-fix.mjs` | Repairs a branch-preview theme's CSS (themes with a settings-driven `.css.liquid` only) |
 | `claude-project.md`, `settings.json` | `.claude/CLAUDE.md`, `.claude/settings.json` | The repo's own facts plus the two imports, and agent permissions. There is no root `CLAUDE.md` |
 
-Three pieces apply only to themes with a settings-driven `.css.liquid` stylesheet (Turbo and
-other vintage-era themes), and `/setup-repo` leaves them out for everything else:
-`configs/preview-fix.mjs`, the branch-preview warning in `configs/pull_request_template.md`, and
-the line of `claude-project.md` marked `CONDITIONAL`.
+Two pieces apply only to themes with a settings-driven `.css.liquid` stylesheet (Turbo and other
+vintage-era themes), and `/setup-repo` leaves them out for everything else:
+`configs/preview-fix.mjs` and the line of `claude-project.md` marked `CONDITIONAL`.
+
+There is no PR template here. Repos use the org-wide one in `Plentiful-Commerce/.github`; a
+repo-level `pull_request_template.md` would replace it entirely.
 
 Every repo uses npm: `npm ci` in CI against a committed `package-lock.json`.
 
