@@ -7,8 +7,8 @@
  * ticked box. Rules: rules/pr-body.mjs.
  *
  * Usage:
- *   npx pc-pr-body-check                 # in GitHub Actions: reads the PR from $GITHUB_EVENT_PATH
- *   npx pc-pr-body-check --file body.md  # locally, before opening the PR
+ *   npx --no-install pc-pr-body-check                 # in GitHub Actions: reads the PR from $GITHUB_EVENT_PATH
+ *   npx --no-install pc-pr-body-check --file body.md  # locally, before opening the PR
  */
 import { readFileSync } from 'node:fs';
 import { TEMPLATE_URL, checkPrBody } from '../rules/pr-body.mjs';
@@ -38,5 +38,5 @@ if (violations.length === 0) {
 }
 for (const v of violations) console.log(`  [error] ${v.section}: ${v.message}`);
 console.log('\npc-pr-body-check: ✗ edit the PR description; this check reruns on every edit.');
-console.log('Template: npx pc-pr-template');
+console.log('Template: npx --no-install pc-pr-template');
 process.exit(1);

@@ -6,7 +6,7 @@
  * form; `gh pr create --body` and the API skip it. The pc-pr-body CI check fails
  * a PR whose description doesn't follow it.
  *
- * Usage: npx pc-pr-template > pr-body.md
+ * Usage: npx --no-install pc-pr-template > pr-body.md
  */
 import { TEMPLATE_URL } from '../rules/pr-body.mjs';
 

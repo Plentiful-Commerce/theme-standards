@@ -23,7 +23,7 @@ jobs:
 
       # Blocking: tracked files must match the PC repo shape (lockfile, PR template,
       # agent instructions). See rules/repo-checks.mjs in @plentiful/theme-standards.
-      - run: npx pc-repo-check
+      - run: npx --no-install pc-repo-check
 
       - run: npm run lint
       - run: npm run lint:css

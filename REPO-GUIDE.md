@@ -64,8 +64,8 @@ Use Node 22 (see `.nvmrc`). Do not use yarn or pnpm, and do not add another lock
   the result as the body:
 
   ```bash
-  npx pc-pr-template > pr-body.md        # the template, to fill in
-  npx pc-pr-body-check --file pr-body.md # optional: the same check CI runs
+  npx --no-install pc-pr-template > pr-body.md        # the template, to fill in
+  npx --no-install pc-pr-body-check --file pr-body.md # optional: the same check CI runs
   gh pr create --title "<ClickUp task name>" --body-file pr-body.md
   ```
 
