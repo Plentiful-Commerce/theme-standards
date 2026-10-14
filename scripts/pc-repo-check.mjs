@@ -7,7 +7,7 @@
  * lockfile, and .claude/CLAUDE.md as the only agent-instructions file, importing
  * the repo guide and the coding standards. Rules: rules/repo-checks.mjs.
  *
- * Usage: npx pc-repo-check      (run from the repo root; exits 1 on any violation)
+ * Usage: npx --no-install pc-repo-check      (run from the repo root; exits 1 on any violation)
  */
 import { readFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
