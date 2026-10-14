@@ -1,0 +1,19 @@
+# Copy to a repo as `.github/workflows/pr-body.yml`.
+# Blocking: the PR description must follow the org PR template in
+# Plentiful-Commerce/.github. Its own workflow so that editing the description
+# reruns only this check, not the whole lint gate.
+name: PR description
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+jobs:
+  pr-body:
+    name: PR description follows the org template
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npx --yes --package="github:Plentiful-Commerce/theme-standards#v0.1.4" pc-pr-body-check

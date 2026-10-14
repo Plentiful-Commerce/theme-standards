@@ -56,6 +56,26 @@ Use Node 22 (see `.nvmrc`). Do not use yarn or pnpm, and do not add another lock
 - The Shopify GitHub integration pushes theme-editor saves to the default branch as
   `Update from Shopify` commits. Expect to pull before pushing.
 
+## Opening a pull request
+
+- Branch name: `CU-{taskId}_{Task-Name}_{Assignee-Name}`. Title: the exact ClickUp task name.
+- Body: the org PR template from `Plentiful-Commerce/.github`. GitHub fills it in only in the web
+  form; `gh pr create --body` and the API skip it. Print it, fill in every section, and pass
+  the result as the body:
+
+  ```bash
+  npx --no-install pc-pr-template > pr-body.md        # the template, to fill in
+  npx --no-install pc-pr-body-check --file pr-body.md # optional: the same check CI runs
+  gh pr create --title "<ClickUp task name>" --body-file pr-body.md
+  ```
+
+- Two CI checks enforce this. `pc-pr-body-check` (the "PR description" workflow) fails until the
+  description has every template section filled in, a ClickUp link or "N/A" under Related
+  ticket, and a ticked Type of change; editing the description reruns it. `pc-repo-check` fails
+  if the repo contains its own PR template, because that would replace the org one. The same
+  check enforces `package-lock.json` as the only lockfile and `.claude/CLAUDE.md` as the only
+  agent-instructions file.
+
 ## Working with Liquid
 
 **Sections** (`sections/*.liquid`):

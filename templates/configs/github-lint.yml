@@ -20,6 +20,11 @@ jobs:
         with:
           node-version: 22
       - run: npm ci
+
+      # Blocking: tracked files must match the PC repo shape (lockfile, PR template,
+      # agent instructions). See rules/repo-checks.mjs in @plentiful/theme-standards.
+      - run: npx --no-install pc-repo-check
+
       - run: npm run lint
       - run: npm run lint:css
 
@@ -98,4 +103,4 @@ jobs:
       # Blocking: fail on any Liquid offense (warning+) the PR INTRODUCES.
       - name: Block on introduced offenses (PR)
         if: github.event_name == 'pull_request'
-        run: npx --yes --package="github:Plentiful-Commerce/theme-standards#v0.1.1" theme-check-changed tc.json --diff-base "origin/${{ github.base_ref }}" --fail-level warning
+        run: npx --yes --package="github:Plentiful-Commerce/theme-standards#v0.1.4" theme-check-changed tc.json --diff-base "origin/${{ github.base_ref }}" --fail-level warning
