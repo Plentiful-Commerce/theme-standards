@@ -2,7 +2,7 @@
 
 The single source of truth for code quality across all PC client repos. Written so a coding **agent can follow it while building and verify its own output against it** — and so the same rules are enforced automatically by Prettier, ESLint, Stylelint, and Shopify Theme Check in CI.
 
-> **Status:** v1 (2026-06-26). Compiled from the shopify-audit-tool rule engine, the existing repo configs, Notion (Developer guidelines / Coding standards for full site builds / Engineering Wiki), and the PC second brain. Most repos do **not** yet enforce these — see [Part D: Rollout Plan](#part-d--rollout-plan).
+> **Status:** v1 (2026-06-26). Compiled from the shopify-audit-tool rule engine, the existing repo configs, Notion (Developer guidelines / Coding standards for full site builds / Engineering Wiki), and the PC second brain.
 
 ---
 
@@ -122,7 +122,7 @@ The standardized config every theme repo should carry. These encode the parser-c
 Standardize the existing baseline and **fix the drift**:
 - Migrate `babel-eslint@^8` → `@babel/eslint-parser` (the old package is deprecated/abandoned).
 - Keep: `no-var: error`, `no-unused-vars: error`, `no-irregular-whitespace: error`, `prefer-const`, `eqeqeq`.
-- **Remove the `casalina` override** that sets `no-unused-vars: off` — it's the only repo that loosened it.
+- **Remove any repo override** that sets `no-unused-vars: off`.
 - Add `eslint-config-prettier` so ESLint and Prettier don't fight; wire up the dead prettier deps in the React repos with an actual config.
 
 ### B3. Stylelint (CSS — new)
@@ -168,44 +168,7 @@ Today CI only compiles+commits assets. Add a PR-blocking job that runs: `prettie
 
 ---
 
-## Part C — Repo-by-repo gaps (as of 2026-06-26)
-
-**In scope (6 repos):** bea-colette, le-fil, casalina, mr-riegillio, farmer-bailey, garden-club-plants. All other repos (bea-colette-gift-note, wood-finishers-depot, the 3-porch themes, the React/cardsmith repos, shipstation) are **out of scope** for this rollout.
-
-| Repo | Has husky? | Gap to close |
-|---|---|---|
-| **bea-colette** | yes | Add Prettier/Stylelint/EditorConfig; wire `theme-check` + lint into scripts & CI. |
-| **le-fil** | yes | Same as bea-colette — closest to baseline. |
-| **casalina** | yes | Remove the `no-unused-vars: off` override; align `swiper` (on 11, others on 8); plus add Prettier/Stylelint/EditorConfig + scripts & CI. |
-| **mr-riegillio** | **no** | Add husky pre-commit; plus full baseline (Prettier/Stylelint/EditorConfig + scripts & CI). |
-| **farmer-bailey** | **no** | Add husky pre-commit; plus full baseline. |
-| **garden-club-plants** | **no** | No ESLint, no Theme Check, no husky — adopt full baseline. (SASS-only, not Encore — adapt scripts accordingly.) |
-| **All 6** | — | Migrate `babel-eslint`→`@babel/eslint-parser`; bump husky 7→9 where present; Node→even LTS; `checkout/setup-node` `@v2`→`@v4`. (garden-club-plants has no babel-eslint/husky to migrate.) |
-
----
-
-## Part D — Rollout Plan
-
-**Phase 0 — Ratify (this doc).** Review/edit, then commit as the canonical reference. Drop a pointer in each repo's `.claude/CLAUDE.md` so the agent loads it.
-
-**Phase 1 — Build the shared config package.** Create `@plentiful/theme-standards` (or a `pc-theme-config` template repo) holding the canonical `.prettierrc`, `.eslintrc`, `.stylelintrc`, `.theme-check.yml`, `.editorconfig`, husky/lint-staged, and `lint.yml` CI. One source to copy/extend, so configs stop drifting repo-to-repo.
-
-**Phase 2 — Pilot on one active repo** (suggest **casalina** or **le-fil** — both active, both have husky). Wire in the full toolchain, run `npm run check`, fix the surfaced violations in a dedicated PR, confirm CI gates work. This calibrates how noisy the rules are before fanning out.
-
-**Phase 3 — Roll out to the rest of the in-scope set** (the other 5 of the 6 Part C repos) one PR each (a workflow/loop can fan this out). Each PR: add config + scripts + CI + hooks, run `format`, fix lint failures, green CI.
-
-**Phase 4 — Encode Layer 3 into the agent.** Add the Part A rules to `.claude/CLAUDE.md` (or a referenced standards file) in each repo so the build agent self-checks before every PR, and the code-review step (QA2) verifies against the same list. Convert the audit-tool's `check()` rules that Theme Check can't express into a small custom theme-check plugin or a `scripts/pc-lint.mjs` the CI runs.
-
-**Phase 5 — Close the loop with the audit tool.** The monthly audit already scores these dimensions. Treat a regression in the audit (e.g. LCP slips, dual tracking reappears) as a signal that a Layer 2 rule is missing — promote recurring audit findings into lint rules.
-
-### Recommended immediate next steps
-1. **Review this doc** and correct anything (esp. branch-naming and the `master`/`main` reconciliation already handled here).
-2. **Approve Phase 1** — I can scaffold the shared config package + the six canonical config files.
-3. **Pick the pilot repo** and I'll wire it end-to-end in one PR so you can see the violation surface before committing to a fleet-wide rollout.
-
----
-
-## Part E — Agent & CI architecture
+## Part C — Agent & CI architecture
 
 How a **code-implementation agent** (running in GitHub Actions or a VPS, headless) relates to these standards. Principle: **layered, not either/or.** The agent carries the universal rules, each repo carries its own deltas, and CI is the hard gate that doesn't trust the agent at all.
 
@@ -245,5 +208,3 @@ Start on **GitHub Actions** — already proven via `claude-code-action` in the a
 - Tier 2 = `@plentiful/theme-standards`, **imported** into every repo's CLAUDE.md.
 - Tier 3 = each repo's own CLAUDE.md delta.
 - **CI runs the deterministic checks as the real gate** — never rely on the agent for what a linter can prove.
-
-> Phase 1 of the rollout (build the shared config + standards package) is also what makes a cloud agent viable — it's the same work.
