@@ -253,7 +253,7 @@ Client repos pin a release tag (`github:Plentiful-Commerce/theme-standards#v0.2.
 1. In the PR that changes the package, bump `version` in `package.json`.
 2. Once it merges, check out `main`, pull, and run `npm run release`. It tags `v<version>` and pushes the tag. It refuses on a dirty tree, a `main` that differs from `origin/main`, or a tag that already exists.
 
-3. Bump the client repos with `ops/theme-standards/bump.sh <tag>` in `internal-claude`. It opens one PR per repo (as PC Builder), regenerates each lockfile, and skips repos already on the tag. A release that changes config file shapes, as v0.2.0 did, needs hand-made PRs instead.
+3. Bump the client repos with `ops/tools-and-software/theme-standards/bump.sh <tag>` in `internal-claude`. It opens one PR per repo (as PC Builder), regenerates each lockfile, and skips repos already on the tag. A release that changes config file shapes, as v0.2.0 did, needs hand-made PRs instead.
 
 Release tags are protected by a tag ruleset (`v*`): they cannot be deleted or moved, so a released version always points at the same code. A wrong tag cannot be fixed, only superseded by the next version. The `Release check` workflow fails when a pushed tag doesn't match `package.json`, which catches a tag made by hand.
 
