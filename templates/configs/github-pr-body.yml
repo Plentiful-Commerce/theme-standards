@@ -16,4 +16,4 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npx --yes --package="github:Plentiful-Commerce/theme-standards#v0.1.4" pc-pr-body-check
+      - run: npx --yes --package="github:Plentiful-Commerce/theme-standards#v0.2.0" pc-pr-body-check

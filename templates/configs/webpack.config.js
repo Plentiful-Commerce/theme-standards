@@ -1,5 +1,3 @@
-/* eslint-env node */
-
 const Encore = require('@symfony/webpack-encore');
 const ImageminWebpWebpackPlugin = require("imagemin-webp-webpack-plugin");
 const Path = require('path');

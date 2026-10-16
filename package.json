@@ -1,6 +1,6 @@
 {
   "name": "@plentiful/theme-standards",
-  "version": "0.1.4",
+  "version": "0.2.0",
   "description": "Canonical lint/format/Theme Check configs and the custom pc-lint checks for Plentiful Commerce Shopify theme repos.",
   "type": "module",
   "bin": {
@@ -9,20 +9,23 @@
     "pc-design-tokens": "./scripts/pc-design-tokens.mjs",
     "pc-repo-check": "./scripts/pc-repo-check.mjs",
     "pc-pr-template": "./scripts/pc-pr-template.mjs",
-    "pc-pr-body-check": "./scripts/pc-pr-body-check.mjs"
+    "pc-pr-body-check": "./scripts/pc-pr-body-check.mjs",
+    "pc-pre-commit": "./scripts/pc-pre-commit.sh"
   },
   "exports": {
     "./prettier": "./prettier.json",
-    "./eslint": "./eslint/index.cjs",
+    "./eslint": "./eslint/index.mjs",
     "./stylelint": "./stylelint/index.json",
     "./theme-check": "./theme-check/index.yml",
     "./rules/liquid-checks.mjs": "./rules/liquid-checks.mjs",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./lint-staged": "./lint-staged/index.mjs"
   },
   "files": [
     "prettier.json",
     "eslint",
     "stylelint",
+    "lint-staged",
     "theme-check",
     "rules",
     "templates",
@@ -30,18 +33,21 @@
     "CODING-STANDARDS.md",
     "REPO-GUIDE.md"
   ],
-  "peerDependencies": {
-    "@babel/eslint-parser": "^7.23.0",
-    "@shopify/prettier-plugin-liquid": "^1.5.0",
-    "eslint": "^8.57.0",
-    "eslint-config-prettier": "^9.1.0",
-    "prettier": "^3.3.0",
-    "stylelint": "^16.0.0",
-    "stylelint-config-standard": "^36.0.0"
+  "dependencies": {
+    "@babel/core": "8.0.7",
+    "@babel/eslint-parser": "8.0.7",
+    "@eslint/js": "10.0.1",
+    "@shopify/prettier-plugin-liquid": "1.11.2",
+    "eslint": "10.12.0",
+    "eslint-config-prettier": "10.1.8",
+    "globals": "17.13.0",
+    "lint-staged": "17.6.0",
+    "prettier": "3.9.10",
+    "stylelint": "17.16.0",
+    "stylelint-config-standard": "40.0.0"
   },
-  "peerDependenciesMeta": {
-    "@shopify/prettier-plugin-liquid": { "optional": false },
-    "stylelint-config-standard": { "optional": false }
+  "engines": {
+    "node": "^22.18.0 || >=24.11.0"
   },
   "license": "UNLICENSED",
   "private": true,

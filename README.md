@@ -14,18 +14,21 @@ Canonical lint/format/Theme Check configs + the custom `pc-lint` checks for ever
 
 **When it fails:** read the message — it names the file, line, and fix. Fix it and push. For a genuine one-off, `git commit --no-verify` skips the *local* hook (CI still enforces). CI must be green to merge.
 
-**Adopting a new repo:** follow [Adopting it in a repo](#adopting-it-in-a-repo) below. **Changing a rule:** edit it once here (in `rules/liquid-checks.mjs` or the config files), [release a new version](#releasing), bump the dep in each repo — the gate and the audit tool both read from this one place.
+**Adopting a new repo:** follow [Adopting it in a repo](#adopting-it-in-a-repo) below. **Changing a rule or a tool version:** edit it once here (in `rules/liquid-checks.mjs`, the config files or the `dependencies` pins), [release a new version](#releasing), and run the bump script — the gate and the audit tool both read from this one place. **Changing a CI step:** edit `.github/workflows/lint.yml` here; every repo picks it up on its next PR, with no release (see [Shared CI workflow](#shared-ci-workflow)).
 
 ## What's in here
 
 | Path | Purpose |
 |---|---|
 | `prettier.json` | Prettier config (+ `@shopify/prettier-plugin-liquid`) |
-| `eslint/index.cjs` | Shared ESLint config (ESLint 8, `@babel/eslint-parser`, prettier-compatible) |
+| `eslint/index.mjs` | Shared ESLint flat config (ESLint 10, `@babel/eslint-parser`, prettier-compatible, Node globals for root `*.config.js`) |
 | `stylelint/index.json` | Stylelint config (rem-not-px, `!important` warnings) |
+| `lint-staged/index.mjs` | The lint-staged config the pre-commit hook runs (Prettier, ESLint `--fix`, Stylelint `--fix` on staged files) |
 | `theme-check/index.yml` | Shopify Theme Check baseline (PC thresholds + `ValidScopedCSSClass`) |
 | `rules/liquid-checks.mjs` | **The single source of truth** for the deterministic Liquid/CSS/JS rules. Imported by both `pc-lint` (the gate) **and** `shopify-audit-tool` (client scoring) so they can't drift |
 | `scripts/pc-lint.mjs` | Thin wrapper that runs `rules/liquid-checks.mjs` and blocks on error-severity violations (warnings advise). 13 rules: include, document.write, stylesheet_tag-in-section, dual-tracking, duplicate-script, browserslist-IE, tracking-before-charset, content_for_header, hero-lazyload, dynamic-style-block, monolithic-css, inline-JS, render-blocking-CSS, dated sale CSS |
+| `scripts/pc-pre-commit.sh` | The pre-commit hook body: lint-staged with the shared config, then line-scoped Theme Check on staged Liquid. A repo's `.husky/pre-commit` is one line that runs it |
+| `.github/workflows/lint.yml` | The shared CI gate (`workflow_call`). A repo's `lint.yml` calls it at `main`. See [Shared CI workflow](#shared-ci-workflow) |
 | `scripts/theme-check-changed.mjs` | Diff-scopes Shopify Theme Check to offenses on **added lines** — the introduced-only Liquid/SEO/a11y gate |
 | `scripts/pc-design-tokens.mjs` | Flags a hardcoded value that duplicates a CSS token (`#372305 → var(--color-chocolate)`). Property-aware; colors reliable, lengths advisory. Warn-first |
 | `scripts/pc-repo-check.mjs` | Fails CI when the repo drifts from the PC shape: a repo-level PR template, a `yarn.lock` / `pnpm-lock.yaml` or no `package-lock.json`, a root `CLAUDE.md`, or a `.claude/CLAUDE.md` without the two imports. Checks tracked files only. Blocking |
@@ -122,17 +125,17 @@ what new repos get, change the file here.
 
 | Path | Copied to | What it is |
 |---|---|---|
-| `configs/package.json` | `package.json` | Scripts, dependencies, `lint-staged`, `packageManager` and `engines` |
+| `configs/package.json` | `package.json` | Scripts, build dependencies, `packageManager` and `engines`. No lint tools: they come with this package |
 | `configs/webpack.config.js`, `postcss.config.js`, `tailwind.config.js` | repo root | The Webpack Encore build |
 | `configs/.nvmrc` | `.nvmrc` | Node 22, matching CI |
-| `configs/.eslintrc.js`, `.stylelintrc.json`, `.theme-check.yml`, `.editorconfig` | repo root | One-line files that point at the shared configs in this package |
+| `configs/eslint.config.mjs`, `.stylelintrc.json`, `.theme-check.yml`, `.editorconfig` | repo root | One-line files that point at the shared configs in this package |
 | `configs/.gitignore`, `.shopifyignore` | repo root | Ignore lists; `package-lock.json` is tracked, other lockfiles are ignored |
-| `configs/github-lint.yml` | `.github/workflows/lint.yml` | The PR-blocking quality gate |
+| `configs/github-lint.yml` | `.github/workflows/lint.yml` | A short caller of the shared gate in `.github/workflows/lint.yml` here |
 | `configs/github-compile-assets.yml` | `.github/workflows/compile-assets.yml` | Builds and commits `assets/entry-*` on the default branch |
 | `configs/github-monthly-audit.yml` | `.github/workflows/monthly-audit.yml` | Scheduled audit |
 | `configs/github-pr-body.yml` | `.github/workflows/pr-body.yml` | Runs `pc-pr-body-check` on every PR, and again when its description is edited |
 | `configs/CODEOWNERS` | `.github/CODEOWNERS` | Review ownership |
-| `configs/pre-commit` | `.husky/pre-commit` | lint-staged plus line-scoped Theme Check |
+| `configs/pre-commit` | `.husky/pre-commit` | One line: `npx --no-install pc-pre-commit` |
 | `configs/preview-fix.mjs` | `scripts/preview-fix.mjs` | Repairs a branch-preview theme's CSS (themes with a settings-driven `.css.liquid` only) |
 | `claude-project.md`, `settings.json` | `.claude/CLAUDE.md`, `.claude/settings.json` | The repo's own facts plus the two imports, and agent permissions. There is no root `CLAUDE.md` |
 
@@ -153,24 +156,20 @@ Every repo uses npm: `npm ci` in CI against a committed `package-lock.json`.
 > unrelated workflow (e.g. an asset-compile job) will start failing at `npm ci` the moment
 > this lands, and re-running it won't help — a re-run replays the *old* workflow file.
 
-**1. Install** (the package is a PUBLIC git dep — no auth — plus peer deps):
+**1. Install** (the package is a PUBLIC git dep — no auth). It brings the lint tools with it, so the repo lists only this package and husky:
 
 ```bash
-npm i -D "github:Plentiful-Commerce/theme-standards#v0.1.4" \
-  eslint@^8.57.0 @babel/eslint-parser eslint-config-prettier \
-  prettier @shopify/prettier-plugin-liquid \
-  stylelint stylelint-config-standard \
-  husky lint-staged
+npm i -D "github:Plentiful-Commerce/theme-standards#v0.2.0" husky
 ```
-Commit the resulting `package-lock.json`. Every PC repo uses npm; do not add a `yarn.lock`.
+Commit the resulting `package-lock.json`. Every PC repo uses npm; do not add a `yarn.lock`, and do not add an `.npmrc` — the install resolves without `legacy-peer-deps`. Remove any lint tool the repo lists itself (`eslint`, `@babel/eslint-parser`, `eslint-config-prettier`, `prettier`, `@shopify/prettier-plugin-liquid`, `stylelint`, `stylelint-config-standard`, `lint-staged`, and the dead `babel-eslint` / `eslint-loader`): a second copy at another version wins over this package's pin. A repo with the Encore build keeps `eslint-webpack-plugin`, at `^6` (v3 supports only ESLint 7/8).
 
 **2. Add the config files** to the repo root:
 
 ```js
-// .eslintrc.cjs — require.resolve is REQUIRED: ESLint's legacy resolver
-// doesn't honor package "exports", so a bare extends string fails.
-module.exports = { root: true, extends: [require.resolve('@plentiful/theme-standards/eslint')] };
+// eslint.config.mjs
+export { default } from '@plentiful/theme-standards/eslint';
 ```
+A repo that needs its own ignores or overrides spreads the shared config instead: `export default [...standards, { ignores: ['src/vendor/**'] }]`. ESLint 10 reads only `eslint.config.*`: delete `.eslintrc.*` and `.eslintignore`, and remove `/* eslint-env */` comments (flat config does not support them; the shared config gives root `*.config.js` files Node globals).
 ```json
 // .stylelintrc.json
 { "extends": "@plentiful/theme-standards/stylelint" }
@@ -181,7 +180,7 @@ Point Prettier at the shared config via `package.json`:
 ```
 Copy `templates/configs/.editorconfig` → `.editorconfig`.
 
-Copy `templates/configs/.theme-check.yml` → `.theme-check.yml`. It is a three-line file that extends `theme-check/index.yml` by filesystem path (`./node_modules/@plentiful/theme-standards/theme-check/index.yml`), because Theme Check does not resolve package-name `extends`. Two consequences: dependencies must be installed before Theme Check runs, locally and in CI (the `lint.yml` template runs `npm ci` in the Theme Check job for this reason), and the ruleset updates with the package version. **If the repo already has a `.theme-check.yml`, overwrite it — don't leave the legacy one in place.** Most existing theme repos ship a hand-rolled `extends: :nothing` config with an explicit rule list; keeping it means the gate silently runs against a non-standard ruleset and you lose `theme-check:recommended` plus `ValidScopedCSSClass` (must-run per CODING-STANDARDS A7). Add any genuinely repo-specific bits (e.g. an `ignore:` list) below the `extends` line, under a clearly marked overrides heading.
+Copy `templates/configs/.theme-check.yml` → `.theme-check.yml`. It is a three-line file that extends `theme-check/index.yml` by filesystem path (`./node_modules/@plentiful/theme-standards/theme-check/index.yml`), because Theme Check does not resolve package-name `extends`. Two consequences: dependencies must be installed before Theme Check runs, locally and in CI (the shared workflow runs `npm ci` in the Theme Check job for this reason), and the ruleset updates with the package version. **If the repo already has a `.theme-check.yml`, overwrite it — don't leave the legacy one in place.** Most existing theme repos ship a hand-rolled `extends: :nothing` config with an explicit rule list; keeping it means the gate silently runs against a non-standard ruleset and you lose `theme-check:recommended` plus `ValidScopedCSSClass` (must-run per CODING-STANDARDS A7). Add any genuinely repo-specific bits (e.g. an `ignore:` list) below the `extends` line, under a clearly marked overrides heading, each with a written reason.
 
 Expect the canonical config to surface **more** offenses than the legacy one. That's the point — they're pre-existing debt, they don't block (the whole-repo pass is warn-only and the gate is diff-scoped), and they belong on a debt ticket.
 
@@ -190,7 +189,7 @@ Expect the canonical config to surface **more** offenses than the legacy one. Th
 ```jsonc
 "scripts": {
   "lint": "eslint 'src/**/*.js'",
-  "lint:css": "stylelint '**/*.css'",
+  "lint:css": "stylelint 'src/**/*.{css,scss}' --allow-empty-input",
   "lint:liquid": "shopify theme check",
   "format": "prettier --write .",
   "format:check": "prettier --check .",
@@ -199,11 +198,11 @@ Expect the canonical config to surface **more** offenses than the legacy one. Th
   "check": "npm run lint && pc-lint --warn"
 }
 ```
-`npm run check` is the quick local pass; the **CI gate** in `lint.yml` is what actually blocks (on the PR diff). Once the repo's whole-repo `--warn` pass is clean, drop `--warn` here to make it blocking too.
+`npm run check` is the quick local pass; the **CI gate** is what actually blocks (on the PR diff). Once the repo's whole-repo `--warn` pass is clean, drop `--warn` here to make it blocking too.
 
 **4. Wire up hooks + CI:**
-- Copy `templates/configs/pre-commit` → `.husky/pre-commit` (run `npx husky init` first on fresh repos), and copy the `"lint-staged"` block from `templates/configs/package.json` into the repo's `package.json`.
-- Copy `templates/configs/github-lint.yml` → `.github/workflows/lint.yml`. Use it as written: every PC repo installs with `npm ci` against a committed `package-lock.json`. **Keep every step** — the Prettier `--check` and Stylelint steps are blocking gates.
+- Copy `templates/configs/pre-commit` → `.husky/pre-commit` (run `npx husky init` first on fresh repos). It is one line, `npx --no-install pc-pre-commit`. The repo needs no `lint-staged` block: the hook passes the shared `lint-staged/index.mjs` to lint-staged. Delete any `lint-staged` block left in `package.json`.
+- Copy `templates/configs/github-lint.yml` → `.github/workflows/lint.yml`, and set `push.branches` to the repo's default branch. Change nothing else, unless the repo declares an input (see [Shared CI workflow](#shared-ci-workflow)).
 
 **5. Point the build agent at the standards** — copy `templates/claude-project.md` → `.claude/CLAUDE.md` and fill in the placeholders (Tier 2 import, CODING-STANDARDS Part C). It imports both shared files:
 
@@ -214,17 +213,51 @@ Expect the canonical config to surface **more** offenses than the legacy one. Th
 
 The paths start with `../` because an import resolves relative to the file that contains it, and that file is inside `.claude/`. `@./node_modules/...` points at `.claude/node_modules` and loads nothing. Do not add a root `CLAUDE.md`: anything generic belongs in `REPO-GUIDE.md` here, and anything specific to the repo goes under "Notes for this repo only".
 
+## Tool versions
+
+This package owns the lint toolchain. Its `dependencies` pin exact versions (no `^`) of ESLint, `@eslint/js`, `@babel/eslint-parser` with `@babel/core`, `globals`, `eslint-config-prettier`, Prettier with `@shopify/prettier-plugin-liquid`, Stylelint with `stylelint-config-standard`, and lint-staged. npm hoists them to the repo's `node_modules`, so `eslint`, `stylelint`, `prettier` and `lint-staged` are on the repo's path and `eslint-webpack-plugin` finds `eslint`. A release decides the toolchain for every repo; to upgrade a tool, change its pin here and release.
+
+`@babel/core` 8 sits next to the parser inside this package's own `node_modules`, so it does not clash with the Babel 7 that Webpack Encore installs at the top level.
+
+Version changes that move findings (v0.2.0, from ESLint 8 / Stylelint 16):
+- ESLint 10's recommended set adds `no-unused-private-class-members`, `no-empty-static-block` and others, and `no-constant-condition` no longer reports `while (true)`. `no-unused-vars` keeps ESLint 8's `caughtErrors: 'none'`.
+- `stylelint-config-standard` 40 adds rules over 36. A repo that moves from 36 gets new CSS findings.
+
+## Shared CI workflow
+
+`.github/workflows/lint.yml` here is the gate every repo runs. A repo's `lint.yml` only sets the triggers and calls it at `main`:
+
+```yaml
+jobs:
+  lint:
+    uses: Plentiful-Commerce/theme-standards/.github/workflows/lint.yml@main
+```
+
+So a change to the steps reaches every repo on its next PR, with no release and no bump PR. The lint tools those steps run still come from the repo's pinned package version; the Shopify CLI that runs Theme Check is pinned in the workflow itself.
+
+**Inputs.** Both default to `true`. Set one to `false` in a repo only while that debt has a ticket.
+
+| Input | What it turns off |
+|---|---|
+| `stylelint` | `npm run lint:css` |
+| `prettier` | `prettier --check` on the files a PR changes |
+
+**Status check names** are `lint / Format + ESLint + Stylelint + pc-lint` and `lint / Shopify Theme Check` (the caller's job id, then the job name here). Rulesets require them by name, so do not rename the jobs or the caller's `lint` job, and never make a job name depend on an input.
+
+**Changing the workflow.** A bad change breaks CI in every repo at once. Before merging a change to `main`, test it from one repo's PR: point that repo's caller at your branch (`…/lint.yml@<branch>`), push, check both jobs, then put it back to `@main`.
+
 ## Releasing
 
-Client repos pin a release tag (`github:Plentiful-Commerce/theme-standards#v0.1.4`), and the tag must match `version` in `package.json`.
+Client repos pin a release tag (`github:Plentiful-Commerce/theme-standards#v0.2.0`), and the tag must match `version` in `package.json`.
 
 1. In the PR that changes the package, bump `version` in `package.json`.
 2. Once it merges, check out `main`, pull, and run `npm run release`. It tags `v<version>` and pushes the tag. It refuses on a dirty tree, a `main` that differs from `origin/main`, or a tag that already exists.
+
+3. Bump the client repos with `ops/tools-and-software/theme-standards/bump.sh <tag>` in `internal-claude`. It opens one PR per repo (as PC Builder), regenerates each lockfile, and skips repos already on the tag. A release that changes config file shapes, as v0.2.0 did, needs hand-made PRs instead.
 
 Release tags are protected by a tag ruleset (`v*`): they cannot be deleted or moved, so a released version always points at the same code. A wrong tag cannot be fixed, only superseded by the next version. The `Release check` workflow fails when a pushed tag doesn't match `package.json`, which catches a tag made by hand.
 
 ## Notes
 
 - A **SASS-only repo** (not Encore) needs the `lint`/`lint:css` globs adjusted to its layout.
-- **ESLint 8** on purpose — the themes are on 8.x; the migration is `babel-eslint` → `@babel/eslint-parser`, not an ESLint major bump.
 - Stylelint `font-size: px` and `!important` are **warnings**, not errors, so legacy CSS doesn't block the first adoption PR. Tighten to `error` once a repo is clean.

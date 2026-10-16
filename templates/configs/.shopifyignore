@@ -13,7 +13,7 @@ src
 .cursor
 CLAUDE.md
 *.md
-.eslintrc.js
+eslint.config.mjs
 .prettierrc
 .prettierrc.json
 .stylelintrc.json
