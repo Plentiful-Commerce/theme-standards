@@ -1,0 +1,18 @@
+# Fails when a release tag doesn't match package.json "version".
+# Catches a tag made by hand or in the GitHub UI instead of `npm run release`.
+name: Release check
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  version-matches-tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # release.mjs uses Node built-ins only, so no npm ci.
+      - run: node scripts/release.mjs --check "$GITHUB_REF_NAME"

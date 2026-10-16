@@ -1,6 +1,6 @@
 # @plentiful/theme-standards
 
-Canonical lint/format/Theme Check configs + the custom `pc-lint` checks for every Plentiful Commerce Shopify theme repo. One source of truth so configs stop drifting repo-to-repo. Implements [CODING-STANDARDS.md](./CODING-STANDARDS.md) (Parts A & B); see Part D for the rollout and Part E for the agent/CI model.
+Canonical lint/format/Theme Check configs + the custom `pc-lint` checks for every Plentiful Commerce Shopify theme repo. One source of truth so configs stop drifting repo-to-repo. Implements [CODING-STANDARDS.md](./CODING-STANDARDS.md) (Parts A & B); see Part C for the agent/CI model.
 
 ## For developers (start here)
 
@@ -14,7 +14,7 @@ Canonical lint/format/Theme Check configs + the custom `pc-lint` checks for ever
 
 **When it fails:** read the message — it names the file, line, and fix. Fix it and push. For a genuine one-off, `git commit --no-verify` skips the *local* hook (CI still enforces). CI must be green to merge.
 
-**Adopting a new repo:** follow [Adopting it in a repo](#adopting-it-in-a-repo) below. **Changing a rule:** edit it once here (in `rules/liquid-checks.mjs` or the config files), tag a new version, bump the dep in each repo — the gate and the audit tool both read from this one place.
+**Adopting a new repo:** follow [Adopting it in a repo](#adopting-it-in-a-repo) below. **Changing a rule:** edit it once here (in `rules/liquid-checks.mjs` or the config files), [release a new version](#releasing), bump the dep in each repo — the gate and the audit tool both read from this one place.
 
 ## What's in here
 
@@ -205,7 +205,7 @@ Expect the canonical config to surface **more** offenses than the legacy one. Th
 - Copy `templates/configs/pre-commit` → `.husky/pre-commit` (run `npx husky init` first on fresh repos), and copy the `"lint-staged"` block from `templates/configs/package.json` into the repo's `package.json`.
 - Copy `templates/configs/github-lint.yml` → `.github/workflows/lint.yml`. Use it as written: every PC repo installs with `npm ci` against a committed `package-lock.json`. **Keep every step** — the Prettier `--check` and Stylelint steps are blocking gates.
 
-**5. Point the build agent at the standards** — copy `templates/claude-project.md` → `.claude/CLAUDE.md` and fill in the placeholders (Tier 2 import, CODING-STANDARDS Part E). It imports both shared files:
+**5. Point the build agent at the standards** — copy `templates/claude-project.md` → `.claude/CLAUDE.md` and fill in the placeholders (Tier 2 import, CODING-STANDARDS Part C). It imports both shared files:
 
 ```markdown
 @../node_modules/@plentiful/theme-standards/REPO-GUIDE.md
@@ -214,9 +214,17 @@ Expect the canonical config to surface **more** offenses than the legacy one. Th
 
 The paths start with `../` because an import resolves relative to the file that contains it, and that file is inside `.claude/`. `@./node_modules/...` points at `.claude/node_modules` and loads nothing. Do not add a root `CLAUDE.md`: anything generic belongs in `REPO-GUIDE.md` here, and anything specific to the repo goes under "Notes for this repo only".
 
+## Releasing
+
+Client repos pin a release tag (`github:Plentiful-Commerce/theme-standards#v0.1.4`), and the tag must match `version` in `package.json`.
+
+1. In the PR that changes the package, bump `version` in `package.json`.
+2. Once it merges, check out `main`, pull, and run `npm run release`. It tags `v<version>` and pushes the tag. It refuses on a dirty tree, a `main` that differs from `origin/main`, or a tag that already exists.
+
+Release tags are protected by a tag ruleset (`v*`): they cannot be deleted or moved, so a released version always points at the same code. A wrong tag cannot be fixed, only superseded by the next version. The `Release check` workflow fails when a pushed tag doesn't match `package.json`, which catches a tag made by hand.
+
 ## Notes
 
-- **garden-club-plants** is SASS-only (not Encore) — adjust the `lint`/`lint:css` globs to its layout.
+- A **SASS-only repo** (not Encore) needs the `lint`/`lint:css` globs adjusted to its layout.
 - **ESLint 8** on purpose — the themes are on 8.x; the migration is `babel-eslint` → `@babel/eslint-parser`, not an ESLint major bump.
 - Stylelint `font-size: px` and `!important` are **warnings**, not errors, so legacy CSS doesn't block the first adoption PR. Tighten to `error` once a repo is clean.
-- To publish to the Plentiful-Commerce org: extract this directory to its own repo, `npm publish` to the org's private registry (or consume via a git URL).

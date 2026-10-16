@@ -1,6 +1,6 @@
-# Rollout Roadmap & Enforcement
+# Enforcement
 
-The live plan for the PC code-quality gate. For *how the checks work in detail*, see the README ("For developers" + "Enforcement model"). This file is the **status + what blocks + what's left**.
+How the PC code-quality gate is enforced. For *how the checks work in detail*, see the README ("For developers" + "Enforcement model"). This file is **what runs when, and what blocks**.
 
 ## When checks run & when they block
 
@@ -16,7 +16,7 @@ The live plan for the PC code-quality gate. For *how the checks work in detail*,
 **Warns (advisory):** `pc-lint` warning rules (`dynamic-style-block`, `inline-js-too-large`, `monolithic-css`, `sale-css-dated`) · design-token duplicates · all whole-repo legacy debt.
 
 ### Two things that gate "actually blocked"
-1. **Adopted repos only** — the gate runs only where the package is installed (see status below).
+1. **Adopted repos only** — the gate runs only where the package is installed.
 2. **Branch protection makes CI a true merge-blocker** — a red check does *not* prevent merge on its own. Each repo needs a branch-protection rule on `main` requiring the **Lint** and **Shopify Theme Check** status checks. Until then the gate is informational at merge time.
 
 ## Running the gate in an implementation agent (VPS / CI / local)
@@ -26,25 +26,3 @@ The same gate runs in **any headless environment** — it's just Node + the Shop
 **A VPS implementation agent needs:** Node 22 · git · network to `npm/yarn install` the (public) package · the **Shopify CLI preinstalled** (`npm i -g @shopify/cli`, or the lighter `@shopify/theme-check-node`) so it isn't re-downloaded per run.
 
 **One-command self-check (`pc-gate`, planned):** so an agent can verify its own diff exactly like CI — compute changed files vs a base ref, then run ESLint + `pc-lint --files` + Theme Check introduced + design-tokens, exiting non-zero on anything blocking. Until it exists, the agent runs the CI steps in sequence.
-
-## Status
-
-### ✅ Done
-- `@plentiful/theme-standards` — **public repo**, `v0.1.1`. Shared rule module (`rules/liquid-checks.mjs`), `pc-lint`, `theme-check-changed`, `pc-design-tokens`, configs, CI template, husky hook.
-- **le-fil** fully adopted (PR #67 merged) — consumes the package, CI green, `.claude/CLAUDE.md` pointer (PR #69).
-- **shopify-audit-tool** reads the same shared rule module — gate and audit can't drift.
-- Docs: README "For developers", `CODING-STANDARDS.md`, this file.
-- le-fil tracked debt logged (ClickUp backlog ticket).
-
-### ▶ Remaining (in order)
-| Step | Owner | Notes |
-|---|---|---|
-| **Branch protection on le-fil `main`** requiring Lint + Theme Check | you | makes the gate a real merge-blocker (currently none) |
-| **Phase 3 — adopt in the other 5 repos** | me → you review/merge | casalina, farmer-bailey, mr-riegillio, bea-colette, garden-club-plants. One PR each: install package, `extends` configs, npx bin scripts, CI, hook, `.claude/CLAUDE.md`. Adjust per-repo (yarn/npm, `src/` layout). + branch protection each. garden-club needs extra setup (SASS-only). |
-| **Agent execution — `pc-gate` one-command self-check** | me | single entry point that runs the full gate on a diff, so a VPS/CI implementation agent self-verifies exactly like CI. Validate it runs headless on the VPS (Node + Shopify CLI, no auth). |
-| **Phase 4 — agent Tier-2 self-check** | me | `.claude/CLAUDE.md` pattern (done for le-fil); wire the VPS/CI agent to run `pc-gate` before opening a PR |
-| **Phase 5 — rendered checks (Tier 2)** | me | turn the audit tool into a PR check against a deploy preview (axe contrast, Lighthouse LCP) — catches what a static gate can't |
-| **Phase 6 — tighten & maintain** | me | once a repo's warn pass is clean, promote design-token colors + Theme Check (`--fail-level=error`) + Stylelint to blocking. Rule change = edit here → tag version → bump the dep in each repo (manual, no automation for 6 repos). |
-
-### Decisions only you make
-Create org repos/settings · set branch protection · merge each PR.
