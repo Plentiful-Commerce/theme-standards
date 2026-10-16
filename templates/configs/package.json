@@ -2,7 +2,7 @@
   "devDependencies": {
     "@babel/eslint-parser": "^7.23.0",
     "@babel/preset-env": "^7.17.10",
-    "@plentiful/theme-standards": "git+https://github.com/Plentiful-Commerce/theme-standards.git#v0.1.1",
+    "@plentiful/theme-standards": "github:Plentiful-Commerce/theme-standards#v0.1.4",
     "@shopify/prettier-plugin-liquid": "^1.5.0",
     "@symfony/webpack-encore": "^2.1.0",
     "autoprefixer": "^10.4.2",
