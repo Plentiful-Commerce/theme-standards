@@ -233,7 +233,7 @@ jobs:
     uses: Plentiful-Commerce/theme-standards/.github/workflows/lint.yml@main
 ```
 
-So a change to the steps reaches every repo on its next PR, with no release and no bump PR. The tools those steps run still come from the repo's pinned package version.
+So a change to the steps reaches every repo on its next PR, with no release and no bump PR. The lint tools those steps run still come from the repo's pinned package version; the Shopify CLI that runs Theme Check is pinned in the workflow itself.
 
 **Inputs.** Both default to `true`. Set one to `false` in a repo only while that debt has a ticket.
 

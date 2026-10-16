@@ -90,10 +90,12 @@ jobs:
       # then crashes the summary step with "Unexpected end of JSON input".
       - name: Install deps
         run: npm ci
+      # Pinned: an unpinned CLI release would change Theme Check in every repo at once.
+      # Bump it here on purpose, and test it from one repo's PR like any workflow change.
       - name: Run Theme Check
         run: |
           set +e
-          npx --yes @shopify/cli@latest theme check --output json > tc.json 2>tc.err
+          npx --yes @shopify/cli@4.9.4 theme check --output json > tc.json 2>tc.err
           status=$?
           set -e
           if [ ! -s tc.json ] || ! node -e 'JSON.parse(require("fs").readFileSync("tc.json","utf8"))' 2>/dev/null; then
