@@ -1,4 +1,3 @@
-/* eslint-env node */
 let plugin = require('tailwindcss/plugin');
 
 module.exports = {

@@ -1,0 +1,129 @@
+# PC code-quality gate, shared by every client theme repo.
+# A repo's `.github/workflows/lint.yml` is a short caller (templates/configs/github-lint.yml)
+# that references this file at `main`, so a change here reaches every repo on its
+# next PR with no bump PR. A bad change breaks CI everywhere at once: test it from
+# one repo's PR (point that caller at your branch) before merging it to `main`.
+#
+# Blocks on what a PR changes; pre-existing legacy debt stays a tracked warning.
+# The lint tools come from the repo's installed @plentiful/theme-standards version.
+#
+# Job names are what rulesets require as status checks ("<caller job> / <name>").
+# Keep them stable, and never make them depend on an input.
+name: Lint
+
+on:
+  workflow_call:
+    inputs:
+      stylelint:
+        description: Run `npm run lint:css` (blocking). Turn off only while a repo's CSS debt is ticketed.
+        type: boolean
+        default: true
+      prettier:
+        description: Run `prettier --check` on the files a PR changes (blocking).
+        type: boolean
+        default: true
+
+jobs:
+  assets:
+    name: Format + ESLint + Stylelint + pc-lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history so we can diff against the PR base
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+
+      # Blocking: tracked files must match the PC repo shape (lockfile, PR template,
+      # agent instructions). See rules/repo-checks.mjs.
+      - run: npx --no-install pc-repo-check
+
+      - run: npm run lint
+      - if: inputs.stylelint
+        run: npm run lint:css
+
+      # Blocking: formatting and pc-lint must be clean for every file THIS PR touches.
+      - name: Prettier + pc-lint (changed files — blocking)
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          RUN_PRETTIER: ${{ inputs.prettier }}
+        run: |
+          CHANGED=$(git diff --name-only --diff-filter=d "origin/$BASE_REF...HEAD" \
+            | grep -E '\.(js|json|css|scss|liquid)$' || true)
+          echo "Changed files:"; echo "$CHANGED"
+          if [ -n "$CHANGED" ]; then
+            if [ "$RUN_PRETTIER" = "true" ]; then npx --no-install prettier --check $CHANGED; fi
+            npx --no-install pc-lint --files $CHANGED
+          else
+            echo "No relevant changed files."
+          fi
+
+      # Visibility: report whole-repo legacy debt without failing the build.
+      - name: pc-lint (whole repo — warn-only)
+        run: npx --no-install pc-lint --warn
+
+      # Advisory: hardcoded values that duplicate a CSS token, on changed files.
+      - name: Design tokens (changed files — advisory)
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          CHANGED=$(git diff --name-only --diff-filter=d "origin/$BASE_REF...HEAD" \
+            | grep -E '\.(css|scss|liquid)$' || true)
+          if [ -n "$CHANGED" ]; then npx --no-install pc-design-tokens --files $CHANGED; fi
+
+  theme-check:
+    name: Shopify Theme Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history so we can diff against the PR base
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # Required: `.theme-check.yml` extends a file under node_modules.
+      # Without install, theme check fails and writes an empty tc.json, which
+      # then crashes the summary step with "Unexpected end of JSON input".
+      - name: Install deps
+        run: npm ci
+      - name: Run Theme Check
+        run: |
+          set +e
+          npx --yes @shopify/cli@latest theme check --output json > tc.json 2>tc.err
+          status=$?
+          set -e
+          if [ ! -s tc.json ] || ! node -e 'JSON.parse(require("fs").readFileSync("tc.json","utf8"))' 2>/dev/null; then
+            echo "Theme Check produced empty/invalid JSON (exit $status). stderr:"
+            cat tc.err || true
+            echo '[]' > tc.json
+          fi
+      - name: Summary (whole repo — non-blocking)
+        run: |
+          node -e '
+            const fs = require("fs");
+            let d = [];
+            try {
+              d = JSON.parse(fs.readFileSync("tc.json", "utf8"));
+            } catch (e) {
+              console.log("Theme Check whole-repo offenses: (no valid tc.json)");
+              process.exit(0);
+            }
+            if (!Array.isArray(d)) {
+              console.log("Theme Check whole-repo offenses: (unexpected format)", typeof d);
+              process.exit(0);
+            }
+            const o = d.flatMap((f) => f.offenses || []);
+            const s = {};
+            o.forEach((x) => (s[x.severity] = (s[x.severity] || 0) + 1));
+            console.log("Theme Check whole-repo offenses:", JSON.stringify(s));
+          '
+      # Blocking: fail on any Liquid offense (warning+) the PR INTRODUCES.
+      - name: Block on introduced offenses (PR)
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: npx --no-install theme-check-changed tc.json --diff-base "origin/$BASE_REF" --fail-level warning
