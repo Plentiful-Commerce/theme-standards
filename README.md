@@ -156,7 +156,7 @@ Every repo uses npm: `npm ci` in CI against a committed `package-lock.json`.
 **1. Install** (the package is a PUBLIC git dep — no auth — plus peer deps):
 
 ```bash
-npm i -D "github:Plentiful-Commerce/theme-standards#v0.1.1" \
+npm i -D "github:Plentiful-Commerce/theme-standards#v0.1.4" \
   eslint@^8.57.0 @babel/eslint-parser eslint-config-prettier \
   prettier @shopify/prettier-plugin-liquid \
   stylelint stylelint-config-standard \
