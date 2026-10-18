@@ -201,7 +201,7 @@ Expect the canonical config to surface **more** offenses than the legacy one. Th
 **4. Wire up hooks + CI:**
 - Copy `templates/configs/pre-commit` → `.husky/pre-commit` (run `npx husky init` first on fresh repos). It is one line, `npx --no-install pc-pre-commit`. The repo needs no `lint-staged` block: the hook passes the shared `lint-staged/index.mjs` to lint-staged. Delete any `lint-staged` block left in `package.json`.
 - Copy `templates/configs/github-lint.yml` → `.github/workflows/lint.yml`, `github-compile-assets.yml` → `.github/workflows/compile-assets.yml` and `github-pr-body.yml` → `.github/workflows/pr-body.yml`. Set `push.branches` to the repo's default branch in the first two. Change nothing else, unless the repo declares a lint input (see [Shared workflows](#shared-workflows)).
-- `compile-assets` pushes with the repo's `COMPILE_ASSETS_DEPLOY_KEY`, an environment secret in a `compile-assets` environment limited to the default branch. The repo's branch ruleset lets that deploy key through.
+- `compile-assets` pushes with the repo's `COMPILE_ASSETS_DEPLOY_KEY`, an environment secret in a `compile-assets` environment limited to the default branch. The repo's branch ruleset lets that deploy key through. The caller passes it by name (the template does): a reusable workflow gets an empty string for any secret its caller doesn't pass, with no error, so the shared publish job checks it is set.
 
 **5. Point the build agent at the standards** — copy `templates/claude-project.md` → `.claude/CLAUDE.md` and fill in the placeholders (Tier 2 import, CODING-STANDARDS Part C). It imports both shared files:
 

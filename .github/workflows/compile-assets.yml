@@ -9,11 +9,17 @@
 # Test a change from one repo before merging it (see the README, "Shared workflows").
 #
 # Runs in the caller's context: `github.*` is the caller's push, and
-# `environment: compile-assets` and its secret are the caller repo's.
+# `environment: compile-assets` is the caller repo's. The caller must pass
+# COMPILE_ASSETS_DEPLOY_KEY by name: an environment secret it doesn't pass resolves
+# to an empty string here, with no error.
 name: Compile Assets
 
 on:
   workflow_call:
+    secrets:
+      COMPILE_ASSETS_DEPLOY_KEY:
+        description: The repo's compile-assets deploy key (an environment secret); the caller passes it by name.
+        required: true
 
 permissions:
   contents: read
@@ -68,6 +74,16 @@ jobs:
     environment: compile-assets
 
     steps:
+      # `required: true` only checks the caller passes the name, not that it has a value.
+      - name: Check the deploy key is set
+        env:
+          KEY: ${{ secrets.COMPILE_ASSETS_DEPLOY_KEY }}
+        run: |
+          if [ -z "$KEY" ]; then
+            echo "COMPILE_ASSETS_DEPLOY_KEY is empty. The caller must pass it by name under secrets: (see templates/configs/github-compile-assets.yml)."
+            exit 1
+          fi
+
       - name: Checkout code
         uses: actions/checkout@v7
         with:

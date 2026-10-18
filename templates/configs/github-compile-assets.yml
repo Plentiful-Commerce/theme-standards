@@ -5,7 +5,7 @@ name: Compile Assets
 
 on:
   push:
-    branches: [main]
+    branches: [main] # the repo's default branch (some repos use master)
 
 permissions:
   contents: read
@@ -13,3 +13,7 @@ permissions:
 jobs:
   compile:
     uses: Plentiful-Commerce/theme-standards/.github/workflows/compile-assets.yml@main
+    # The deploy key lives in this repo's compile-assets environment. Pass it by name:
+    # a reusable workflow gets an empty string for any secret the caller doesn't pass.
+    secrets:
+      COMPILE_ASSETS_DEPLOY_KEY: ${{ secrets.COMPILE_ASSETS_DEPLOY_KEY }}
