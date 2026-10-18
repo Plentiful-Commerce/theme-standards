@@ -28,12 +28,13 @@ jobs:
     name: Format + ESLint + Stylelint + pc-lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # full history so we can diff against the PR base
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24
+          package-manager-cache: false
       - run: npm ci
 
       # Blocking: tracked files must match the PC repo shape (lockfile, PR template,
@@ -79,12 +80,13 @@ jobs:
     name: Shopify Theme Check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # full history so we can diff against the PR base
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24
+          package-manager-cache: false
       # Required: `.theme-check.yml` extends a file under node_modules.
       # Without install, theme check fails and writes an empty tc.json, which
       # then crashes the summary step with "Unexpected end of JSON input".
