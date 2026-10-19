@@ -16,3 +16,8 @@ updates:
     ignore:
       # Released by Jocelyn and bumped with internal-claude's bump.sh.
       - dependency-name: '@plentiful/theme-standards'
+      # No major versions (Encore, Tailwind, Babel and the like): those change the
+      # compiled assets and need a planned upgrade with a visual check, not a security
+      # PR. Their alerts stay open in the Security tab until that upgrade.
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
