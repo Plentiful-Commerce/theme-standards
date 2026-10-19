@@ -19,17 +19,25 @@ jobs:
     name: PR description follows the org template
     runs-on: ubuntu-latest
     steps:
+      # Dependabot can't fill in the org template. Its PRs still need Jocelyn's
+      # approval, so the check passes for them instead of blocking every one.
+      - name: Skip for Dependabot
+        if: github.event.pull_request.user.login == 'dependabot[bot]'
+        run: echo "Opened by Dependabot; the PR description check doesn't apply."
       # Only package.json, to read the pinned theme-standards version. No install.
-      - uses: actions/checkout@v7
+      - if: github.event.pull_request.user.login != 'dependabot[bot]'
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
           sparse-checkout: package.json
           sparse-checkout-cone-mode: false
-      - uses: actions/setup-node@v7
+      - if: github.event.pull_request.user.login != 'dependabot[bot]'
+        uses: actions/setup-node@v7
         with:
           node-version: 24
           package-manager-cache: false
       - name: Check the description
+        if: github.event.pull_request.user.login != 'dependabot[bot]'
         run: |
           spec=$(node -p 'const p = require("./package.json"); (p.devDependencies || {})["@plentiful/theme-standards"] || (p.dependencies || {})["@plentiful/theme-standards"] || ""')
           if [ -z "$spec" ]; then

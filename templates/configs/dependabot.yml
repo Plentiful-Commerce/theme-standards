@@ -1,0 +1,18 @@
+# Dependabot: security fixes only, as one grouped PR. Copy to .github/dependabot.yml.
+# Security updates themselves are a repository setting (Settings > Code security);
+# this file only shapes the PRs they open.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    # 0 turns off routine version updates; security updates still open.
+    open-pull-requests-limit: 0
+    groups:
+      security:
+        applies-to: security-updates
+        patterns: ['*']
+    ignore:
+      # Released by Jocelyn and bumped with internal-claude's bump.sh.
+      - dependency-name: '@plentiful/theme-standards'
