@@ -1,0 +1,39 @@
+# Blocking: the PR description must follow the org PR template in
+# Plentiful-Commerce/.github. Shared by every client theme repo: a repo's
+# `.github/workflows/pr-body.yml` is a short caller (templates/configs/github-pr-body.yml)
+# that references this file at `main`. It is its own workflow so that editing the
+# description reruns only this check, not the whole lint gate.
+#
+# The check runs from the theme-standards version the repo pins, so a rule change
+# reaches a repo with its next bump, like the other rules.
+name: PR description
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  pr-body:
+    name: PR description follows the org template
+    runs-on: ubuntu-latest
+    steps:
+      # Only package.json, to read the pinned theme-standards version. No install.
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          sparse-checkout: package.json
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Check the description
+        run: |
+          spec=$(node -p 'const p = require("./package.json"); (p.devDependencies || {})["@plentiful/theme-standards"] || (p.dependencies || {})["@plentiful/theme-standards"] || ""')
+          if [ -z "$spec" ]; then
+            echo "package.json does not list @plentiful/theme-standards"
+            exit 1
+          fi
+          npx --yes --package="$spec" pc-pr-body-check

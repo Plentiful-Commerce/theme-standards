@@ -14,7 +14,7 @@ Canonical lint/format/Theme Check configs + the custom `pc-lint` checks for ever
 
 **When it fails:** read the message — it names the file, line, and fix. Fix it and push. For a genuine one-off, `git commit --no-verify` skips the *local* hook (CI still enforces). CI must be green to merge.
 
-**Adopting a new repo:** follow [Adopting it in a repo](#adopting-it-in-a-repo) below. **Changing a rule or a tool version:** edit it once here (in `rules/liquid-checks.mjs`, the config files or the `dependencies` pins), [release a new version](#releasing), and run the bump script — the gate and the audit tool both read from this one place. **Changing a CI step:** edit `.github/workflows/lint.yml` here; every repo picks it up on its next PR, with no release (see [Shared CI workflow](#shared-ci-workflow)).
+**Adopting a new repo:** follow [Adopting it in a repo](#adopting-it-in-a-repo) below. **Changing a rule or a tool version:** edit it once here (in `rules/liquid-checks.mjs`, the config files or the `dependencies` pins), [release a new version](#releasing), and run the bump script — the gate and the audit tool both read from this one place. **Changing a CI step, an action version or the Node version:** edit the workflow in `.github/workflows/` here; every repo picks it up on its next run, with no release (see [Shared workflows](#shared-workflows)).
 
 ## What's in here
 
@@ -28,7 +28,7 @@ Canonical lint/format/Theme Check configs + the custom `pc-lint` checks for ever
 | `rules/liquid-checks.mjs` | **The single source of truth** for the deterministic Liquid/CSS/JS rules. Imported by both `pc-lint` (the gate) **and** `shopify-audit-tool` (client scoring) so they can't drift |
 | `scripts/pc-lint.mjs` | Thin wrapper that runs `rules/liquid-checks.mjs` and blocks on error-severity violations (warnings advise). 13 rules: include, document.write, stylesheet_tag-in-section, dual-tracking, duplicate-script, browserslist-IE, tracking-before-charset, content_for_header, hero-lazyload, dynamic-style-block, monolithic-css, inline-JS, render-blocking-CSS, dated sale CSS |
 | `scripts/pc-pre-commit.sh` | The pre-commit hook body: lint-staged with the shared config, then line-scoped Theme Check on staged Liquid. A repo's `.husky/pre-commit` is one line that runs it |
-| `.github/workflows/lint.yml` | The shared CI gate (`workflow_call`). A repo's `lint.yml` calls it at `main`. See [Shared CI workflow](#shared-ci-workflow) |
+| `.github/workflows/lint.yml`, `compile-assets.yml`, `pr-body.yml` | The shared workflows (`workflow_call`): the lint gate, the asset build that commits `assets/entry-*`, and the PR-description check. A repo's own copies are short callers at `main`. See [Shared workflows](#shared-workflows) |
 | `scripts/theme-check-changed.mjs` | Diff-scopes Shopify Theme Check to offenses on **added lines** — the introduced-only Liquid/SEO/a11y gate |
 | `scripts/pc-design-tokens.mjs` | Flags a hardcoded value that duplicates a CSS token (`#372305 → var(--color-chocolate)`). Property-aware; colors reliable, lengths advisory. Warn-first |
 | `scripts/pc-repo-check.mjs` | Fails CI when the repo drifts from the PC shape: a repo-level PR template, a `yarn.lock` / `pnpm-lock.yaml` or no `package-lock.json`, a root `CLAUDE.md`, or a `.claude/CLAUDE.md` without the two imports. Checks tracked files only. Blocking |
@@ -127,13 +127,13 @@ what new repos get, change the file here.
 |---|---|---|
 | `configs/package.json` | `package.json` | Scripts, build dependencies, `packageManager` and `engines`. No lint tools: they come with this package |
 | `configs/webpack.config.js`, `postcss.config.js`, `tailwind.config.js` | repo root | The Webpack Encore build |
-| `configs/.nvmrc` | `.nvmrc` | Node 22, matching CI |
+| `configs/.nvmrc` | `.nvmrc` | Node 24, matching CI |
 | `configs/eslint.config.mjs`, `.stylelintrc.json`, `.theme-check.yml`, `.editorconfig` | repo root | One-line files that point at the shared configs in this package |
 | `configs/.gitignore`, `.shopifyignore` | repo root | Ignore lists; `package-lock.json` is tracked, other lockfiles are ignored |
 | `configs/github-lint.yml` | `.github/workflows/lint.yml` | A short caller of the shared gate in `.github/workflows/lint.yml` here |
-| `configs/github-compile-assets.yml` | `.github/workflows/compile-assets.yml` | Builds and commits `assets/entry-*` on the default branch |
+| `configs/github-compile-assets.yml` | `.github/workflows/compile-assets.yml` | A short caller of the shared asset build, which commits `assets/entry-*` on the default branch |
 | `configs/github-monthly-audit.yml` | `.github/workflows/monthly-audit.yml` | Scheduled audit |
-| `configs/github-pr-body.yml` | `.github/workflows/pr-body.yml` | Runs `pc-pr-body-check` on every PR, and again when its description is edited |
+| `configs/github-pr-body.yml` | `.github/workflows/pr-body.yml` | A short caller of the shared `pc-pr-body-check` job, run on every PR and again when its description is edited |
 | `configs/CODEOWNERS` | `.github/CODEOWNERS` | Review ownership |
 | `configs/pre-commit` | `.husky/pre-commit` | One line: `npx --no-install pc-pre-commit` |
 | `configs/preview-fix.mjs` | `scripts/preview-fix.mjs` | Repairs a branch-preview theme's CSS (themes with a settings-driven `.css.liquid` only) |
@@ -150,11 +150,9 @@ Every repo uses npm: `npm ci` in CI against a committed `package-lock.json`.
 
 ## Adopting it in a repo
 
-> **Prerequisite: Node 22+.** `@babel/eslint-parser@8` requires `node ^22.18.0 || >=24.11.0`.
-> Adopting the standard therefore raises the repo's Node floor — **bump every workflow in
-> `.github/workflows/`, not just `lint.yml`**, and bump `.nvmrc`. A stale `node-version` in an
-> unrelated workflow (e.g. an asset-compile job) will start failing at `npm ci` the moment
-> this lands, and re-running it won't help — a re-run replays the *old* workflow file.
+> **Node 24.** CI runs Node 24 LTS and the npm it ships (set in the shared workflows here).
+> A repo sets the same in `.nvmrc` and `packageManager`, and regenerates `package-lock.json`
+> with that npm. (`@babel/eslint-parser@8` needs at least `node ^22.18.0 || >=24.11.0`.)
 
 **1. Install** (the package is a PUBLIC git dep — no auth). It brings the lint tools with it, so the repo lists only this package and husky:
 
@@ -202,7 +200,8 @@ Expect the canonical config to surface **more** offenses than the legacy one. Th
 
 **4. Wire up hooks + CI:**
 - Copy `templates/configs/pre-commit` → `.husky/pre-commit` (run `npx husky init` first on fresh repos). It is one line, `npx --no-install pc-pre-commit`. The repo needs no `lint-staged` block: the hook passes the shared `lint-staged/index.mjs` to lint-staged. Delete any `lint-staged` block left in `package.json`.
-- Copy `templates/configs/github-lint.yml` → `.github/workflows/lint.yml`, and set `push.branches` to the repo's default branch. Change nothing else, unless the repo declares an input (see [Shared CI workflow](#shared-ci-workflow)).
+- Copy `templates/configs/github-lint.yml` → `.github/workflows/lint.yml`, `github-compile-assets.yml` → `.github/workflows/compile-assets.yml` and `github-pr-body.yml` → `.github/workflows/pr-body.yml`. Set `push.branches` to the repo's default branch in the first two. Change nothing else, unless the repo declares a lint input (see [Shared workflows](#shared-workflows)).
+- `compile-assets` pushes with the repo's `COMPILE_ASSETS_DEPLOY_KEY`, an environment secret in a `compile-assets` environment limited to the default branch. The repo's branch ruleset lets that deploy key through. The caller passes it by name (the template does): a reusable workflow gets an empty string for any secret its caller doesn't pass, with no error, so the shared publish job checks it is set.
 
 **5. Point the build agent at the standards** — copy `templates/claude-project.md` → `.claude/CLAUDE.md` and fill in the placeholders (Tier 2 import, CODING-STANDARDS Part C). It imports both shared files:
 
@@ -223,9 +222,21 @@ Version changes that move findings (v0.2.0, from ESLint 8 / Stylelint 16):
 - ESLint 10's recommended set adds `no-unused-private-class-members`, `no-empty-static-block` and others, and `no-constant-condition` no longer reports `while (true)`. `no-unused-vars` keeps ESLint 8's `caughtErrors: 'none'`.
 - `stylelint-config-standard` 40 adds rules over 36. A repo that moves from 36 gets new CSS findings.
 
-## Shared CI workflow
+## Shared workflows
 
-`.github/workflows/lint.yml` here is the gate every repo runs. A repo's `lint.yml` only sets the triggers and calls it at `main`:
+Every repo runs three workflows from here, each called at `main` by a short caller in the repo:
+
+| Here | Caller in the repo | What it does |
+|---|---|---|
+| `.github/workflows/lint.yml` | `lint.yml` | The lint gate, below |
+| `.github/workflows/compile-assets.yml` | `compile-assets.yml` | On a push to the default branch, builds `assets/entry-*` and commits them with the repo's deploy key |
+| `.github/workflows/pr-body.yml` | `pr-body.yml` | Fails a PR whose description doesn't follow the org template, using the repo's pinned version of `pc-pr-body-check` |
+
+The action versions and the Node version (24) are set only here, so bumping them is one PR in this repo. `main` here is protected: a change needs a PR and Jocelyn's approval, because `compile-assets` runs with every client repo's deploy key.
+
+### Lint
+
+A repo's `lint.yml` only sets the triggers and calls the gate at `main`:
 
 ```yaml
 jobs:
@@ -244,7 +255,7 @@ So a change to the steps reaches every repo on its next PR, with no release and 
 
 **Status check names** are `lint / Format + ESLint + Stylelint + pc-lint` and `lint / Shopify Theme Check` (the caller's job id, then the job name here). Rulesets require them by name, so do not rename the jobs or the caller's `lint` job, and never make a job name depend on an input.
 
-**Changing the workflow.** A bad change breaks CI in every repo at once. Before merging a change to `main`, test it from one repo's PR: point that repo's caller at your branch (`…/lint.yml@<branch>`), push, check both jobs, then put it back to `@main`.
+**Changing a shared workflow.** A bad change breaks CI in every repo at once. Before merging a change to `main`, test it from one repo's PR: point that repo's caller at your branch (`…/lint.yml@<branch>`), push, check the jobs, then put it back to `@main`. `compile-assets` only runs on a push to the default branch, so a PR can't exercise its publish job: check the first run after merging, in one repo, before the next push elsewhere.
 
 ## Releasing
 

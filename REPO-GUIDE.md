@@ -22,7 +22,7 @@ npm run check            # ESLint + pc-lint (warn)
 npm run format           # Prettier
 ```
 
-Use Node 22 (see `.nvmrc`). Do not use yarn or pnpm, and do not add another lockfile.
+Use Node 24 (see `.nvmrc`). Do not use yarn or pnpm, and do not add another lockfile.
 
 ## Directory structure
 

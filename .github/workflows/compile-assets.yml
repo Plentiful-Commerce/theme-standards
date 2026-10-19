@@ -1,0 +1,116 @@
+# Builds `assets/entry-*` and commits them to the default branch, shared by every
+# client theme repo. A repo's `.github/workflows/compile-assets.yml` is a short caller
+# (templates/configs/github-compile-assets.yml) that references this file at `main`,
+# so an action or Node bump here reaches every repo with no PR there.
+#
+# This runs with each repo's compile-assets deploy key, which the repo's branch
+# ruleset lets push to the default branch. That is why `main` here is protected:
+# a change to this file needs a reviewed PR like a change to any client repo.
+# Test a change from one repo before merging it (see the README, "Shared workflows").
+#
+# Runs in the caller's context: `github.*` is the caller's push, and
+# `environment: compile-assets` is the caller repo's. The caller must pass
+# COMPILE_ASSETS_DEPLOY_KEY by name: an environment secret it doesn't pass resolves
+# to an empty string here, with no error.
+name: Compile Assets
+
+on:
+  workflow_call:
+    secrets:
+      COMPILE_ASSETS_DEPLOY_KEY:
+        description: The repo's compile-assets deploy key (an environment secret); the caller passes it by name.
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  # Runs the repo's build code, so it gets no credentials that can push.
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    # The publish job's deploy-key push triggers this workflow again; skip that run.
+    # Match the author too, so a person reusing the message is not skipped.
+    if: ${{ !(github.event.head_commit.message == 'Compiled assets for production' && github.event.head_commit.author.name == 'CI/CD') }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          # No dependency cache: what this job builds is pushed with a deploy key.
+          package-manager-cache: false
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build for Production
+        run: npm run build
+
+      - name: List output files
+        run: ls -l assets
+
+      - name: Upload compiled assets
+        uses: actions/upload-artifact@v7
+        with:
+          name: compiled-assets
+          path: assets/entry-*
+          if-no-files-found: error
+          # Long enough to re-run a failed publish job a few days later.
+          retention-days: 5
+
+  # Holds the deploy key, so it must never run code from the repo:
+  # no install, no build, only git.
+  publish:
+    name: Publish
+    needs: build
+    runs-on: ubuntu-latest
+    # The deploy key lives in this environment, which only the default branch can use.
+    environment: compile-assets
+
+    steps:
+      # `required: true` only checks the caller passes the name, not that it has a value.
+      - name: Check the deploy key is set
+        env:
+          KEY: ${{ secrets.COMPILE_ASSETS_DEPLOY_KEY }}
+        run: |
+          if [ -z "$KEY" ]; then
+            echo "COMPILE_ASSETS_DEPLOY_KEY is empty. The caller must pass it by name under secrets: (see templates/configs/github-compile-assets.yml)."
+            exit 1
+          fi
+
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          # Push as the compile-assets deploy key, which the branch ruleset lets through.
+          ssh-key: ${{ secrets.COMPILE_ASSETS_DEPLOY_KEY }}
+
+      - name: Download compiled assets
+        uses: actions/download-artifact@v8
+        with:
+          name: compiled-assets
+          path: assets
+
+      - name: Configure Git
+        run: |
+          git config --global user.email "bot@plentifulcommerce.com"
+          git config --global user.name "CI/CD"
+
+      - name: Commit and push if changed
+        env:
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          git add -f assets/entry-*
+          if git diff --cached --quiet; then
+            echo "No compiled asset changes"
+            exit 0
+          fi
+          git commit -m "Compiled assets for production"
+          # Shopify may have committed since checkout; replay on top of it.
+          git pull --rebase origin "$BRANCH"
+          git push origin "HEAD:$BRANCH"
