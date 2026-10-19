@@ -1,0 +1,23 @@
+# theme-standards' own Dependabot config.
+# - npm: security fixes for the pinned lint tools, as one grouped PR. A fix reaches
+#   client repos through the next release and bump.sh.
+# - github-actions: keeps the action versions in the shared workflows current, as one
+#   grouped PR. Test it from one client repo's PR before merging (README, "Shared workflows").
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0
+    groups:
+      security:
+        applies-to: security-updates
+        patterns: ['*']
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ['*']

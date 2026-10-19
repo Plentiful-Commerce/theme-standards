@@ -135,6 +135,7 @@ what new repos get, change the file here.
 | `configs/github-monthly-audit.yml` | `.github/workflows/monthly-audit.yml` | Scheduled audit |
 | `configs/github-pr-body.yml` | `.github/workflows/pr-body.yml` | A short caller of the shared `pc-pr-body-check` job, run on every PR and again when its description is edited |
 | `configs/CODEOWNERS` | `.github/CODEOWNERS` | Review ownership |
+| `configs/dependabot.yml` | `.github/dependabot.yml` | Security fixes only, grouped into one PR; routine version updates off; ignores this package (bumped with `bump.sh`). Turn on Dependabot alerts and security updates in the repo's settings after it merges |
 | `configs/pre-commit` | `.husky/pre-commit` | One line: `npx --no-install pc-pre-commit` |
 | `configs/preview-fix.mjs` | `scripts/preview-fix.mjs` | Repairs a branch-preview theme's CSS (themes with a settings-driven `.css.liquid` only) |
 | `claude-project.md`, `settings.json` | `.claude/CLAUDE.md`, `.claude/settings.json` | The repo's own facts plus the two imports, and agent permissions. There is no root `CLAUDE.md` |
@@ -230,7 +231,7 @@ Every repo runs three workflows from here, each called at `main` by a short call
 |---|---|---|
 | `.github/workflows/lint.yml` | `lint.yml` | The lint gate, below |
 | `.github/workflows/compile-assets.yml` | `compile-assets.yml` | On a push to the default branch, builds `assets/entry-*` and commits them with the repo's deploy key |
-| `.github/workflows/pr-body.yml` | `pr-body.yml` | Fails a PR whose description doesn't follow the org template, using the repo's pinned version of `pc-pr-body-check` |
+| `.github/workflows/pr-body.yml` | `pr-body.yml` | Fails a PR whose description doesn't follow the org template, using the repo's pinned version of `pc-pr-body-check`. Passes for PRs opened by Dependabot, which can't fill in the template |
 
 The action versions and the Node version (24) are set only here, so bumping them is one PR in this repo. `main` here is protected: a change needs a PR and Jocelyn's approval, because `compile-assets` runs with every client repo's deploy key.
 
