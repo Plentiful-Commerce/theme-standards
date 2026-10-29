@@ -127,7 +127,7 @@ what new repos get, change the file here.
 |---|---|---|
 | `configs/package.json` | `package.json` | Scripts, build dependencies, `packageManager` and `engines`. No lint tools: they come with this package |
 | `configs/webpack.config.js`, `postcss.config.js`, `tailwind.config.js` | repo root | The Webpack Encore build |
-| `configs/.nvmrc` | `.nvmrc` | Node 24, matching CI |
+| `configs/.nvmrc` | `.nvmrc` | Node 26, matching CI |
 | `configs/eslint.config.mjs`, `.stylelintrc.json`, `.theme-check.yml`, `.editorconfig` | repo root | One-line files that point at the shared configs in this package |
 | `configs/.gitignore`, `.shopifyignore` | repo root | Ignore lists; `package-lock.json` is tracked, other lockfiles are ignored |
 | `configs/github-lint.yml` | `.github/workflows/lint.yml` | A short caller of the shared gate in `.github/workflows/lint.yml` here |
@@ -151,7 +151,7 @@ Every repo uses npm: `npm ci` in CI against a committed `package-lock.json`.
 
 ## Adopting it in a repo
 
-> **Node 24.** CI runs Node 24 LTS and the npm it ships (set in the shared workflows here).
+> **Node 26.** CI runs Node 26 LTS and the npm it ships (set in the shared workflows here).
 > A repo sets the same in `.nvmrc` and `packageManager`, and regenerates `package-lock.json`
 > with that npm. (`@babel/eslint-parser@8` needs at least `node ^22.18.0 || >=24.11.0`.)
 

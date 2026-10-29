@@ -23,6 +23,6 @@ How the PC code-quality gate is enforced. For *how the checks work in detail*, s
 
 The same gate runs in **any headless environment** — it's just Node + the Shopify CLI, with **no browser and no Shopify auth** (Theme Check is static analysis; only `theme dev`/`push` need a login). GitHub Actions already proves this end-to-end.
 
-**A VPS implementation agent needs:** Node 24 · git · network to `npm/yarn install` the (public) package · the **Shopify CLI preinstalled** (`npm i -g @shopify/cli`, or the lighter `@shopify/theme-check-node`) so it isn't re-downloaded per run.
+**A VPS implementation agent needs:** Node 26 · git · network to `npm/yarn install` the (public) package · the **Shopify CLI preinstalled** (`npm i -g @shopify/cli`, or the lighter `@shopify/theme-check-node`) so it isn't re-downloaded per run.
 
 **One-command self-check (`pc-gate`, planned):** so an agent can verify its own diff exactly like CI — compute changed files vs a base ref, then run ESLint + `pc-lint --files` + Theme Check introduced + design-tokens, exiting non-zero on anything blocking. Until it exists, the agent runs the CI steps in sequence.
