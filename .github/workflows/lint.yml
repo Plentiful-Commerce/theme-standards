@@ -33,7 +33,7 @@ jobs:
           fetch-depth: 0 # full history so we can diff against the PR base
       - uses: actions/setup-node@v7
         with:
-          node-version: 24
+          node-version: 26
           package-manager-cache: false
       - run: npm ci
 
@@ -85,7 +85,7 @@ jobs:
           fetch-depth: 0 # full history so we can diff against the PR base
       - uses: actions/setup-node@v7
         with:
-          node-version: 24
+          node-version: 26
           package-manager-cache: false
       # Required: `.theme-check.yml` extends a file under node_modules.
       # Without install, theme check fails and writes an empty tc.json, which
