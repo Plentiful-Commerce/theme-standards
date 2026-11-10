@@ -34,7 +34,7 @@ jobs:
       - if: github.event.pull_request.user.login != 'dependabot[bot]'
         uses: actions/setup-node@v7
         with:
-          node-version: 24
+          node-version: 26
           package-manager-cache: false
       - name: Check the description
         if: github.event.pull_request.user.login != 'dependabot[bot]'
