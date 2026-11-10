@@ -7,7 +7,7 @@ How the PC code-quality gate is enforced. For *how the checks work in detail*, s
 | Moment | Checks | Blocks? |
 |---|---|---|
 | **`git commit`** (local pre-commit hook) | Prettier/ESLint/Stylelint auto-fix staged files | no (auto-fix) |
-| | Theme Check on staged `.liquid` | **blocks the commit** on offenses you *introduced*; needs Shopify CLI; bypass with `--no-verify` |
+| | Theme Check on staged `.liquid` | **blocks the commit** on offenses you *introduced*; needs Shopify CLI 4 or 5; never skipped |
 | **PR open/update** (CI) | ESLint, `pc-lint`, Theme Check | **go red** on what the PR *introduces* (not legacy) |
 | | design-tokens | advisory (never blocks) |
 

@@ -15,14 +15,13 @@ if git diff --cached --name-only --diff-filter=d | grep -qE '\.liquid$'; then
   if ! command -v shopify >/dev/null 2>&1; then
     echo "✗ This commit changes Liquid but the Shopify CLI is not installed."
     echo "  Install it (brew install shopify-cli) so Theme Check can run, then retry."
-    echo "  Or bypass this once with: git commit --no-verify"
     exit 1
   fi
   TCJSON=$(mktemp)
   shopify theme check --output json > "$TCJSON" 2>/dev/null || true
   if ! node "$pkg/scripts/theme-check-changed.mjs" "$TCJSON" --staged --fail-level warning; then
     rm -f "$TCJSON"
-    echo "Commit blocked by Theme Check. Fix the above, or bypass with: git commit --no-verify"
+    echo "Commit blocked by Theme Check. Fix the above and commit again. If Theme Check itself failed, report it instead of skipping this check."
     exit 1
   fi
   rm -f "$TCJSON"
