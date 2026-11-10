@@ -153,7 +153,8 @@ Every repo uses npm: `npm ci` in CI against a committed `package-lock.json`.
 
 > **Node 26.** CI runs Node 26 LTS and the npm it ships (set in the shared workflows here).
 > A repo sets the same in `.nvmrc` and `packageManager`, and regenerates `package-lock.json`
-> with that npm. (`@babel/eslint-parser@8` needs at least `node ^22.18.0 || >=24.11.0`.)
+> with that npm. Client repos use Node 26. The package itself would still run on older
+> Node: its strictest dependency, `@babel/eslint-parser@8`, needs `^22.18.0 || >=24.11.0`.
 
 **1. Install** (the package is a PUBLIC git dep — no auth). It brings the lint tools with it, so the repo lists only this package and husky:
 
