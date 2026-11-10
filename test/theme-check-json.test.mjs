@@ -61,6 +61,13 @@ test('no offenses in either format is an empty list', () => {
   assert.deepEqual(readThemeCheckJson({ valid: true, issues: [] }), []);
 });
 
+test('an offense with no row gets line null in either format, not NaN', () => {
+  const cli4 = [{ path: '/theme/a.liquid', offenses: [{ check: 'X', severity: 'error', message: 'm' }] }];
+  const cli5 = { valid: false, issues: [{ filePath: '/theme/a.liquid', check: 'X', severity: 'error', message: 'm' }] };
+  assert.equal(readThemeCheckJson(cli4)[0].line, null);
+  assert.equal(readThemeCheckJson(cli5)[0].line, null);
+});
+
 test('a Theme Check error is reported, not read as a clean run', () => {
   assert.throws(
     () => readThemeCheckJson({ error: { type: 'bug', message: 'ENOENT: theme-check/index.yml' } }),

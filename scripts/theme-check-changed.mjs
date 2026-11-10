@@ -102,7 +102,8 @@ for (const o of offenses) {
   const added = lineMode ? lineMap.get(abs) : lineMap.has(abs) ? true : null;
   if (!added) continue;
   if ((order[o.severity] ?? 9) > threshold) continue;
-  if (lineMode && !added.has(o.line)) continue; // only offenses on added lines
+  // Only offenses on added lines. One with no line counts for the whole file, so it isn't dropped.
+  if (lineMode && o.line !== null && !added.has(o.line)) continue;
   hits.push(o);
 }
 
@@ -113,7 +114,7 @@ if (hits.length === 0) {
 console.error(`theme-check: ✗ ${hits.length} introduced offense(s) at/above '${failLevel}'\n`);
 for (const h of hits) {
   console.error(
-    `  [${h.severity}] ${h.check}  ${h.path.replace(process.cwd(), '.')}:${h.line}`
+    `  [${h.severity}] ${h.check}  ${h.path.replace(process.cwd(), '.')}:${h.line ?? '?'}`
   );
   console.error(`      ${h.message}`);
 }

@@ -6,9 +6,13 @@
  *   CLI 5: { valid, issues: [{ filePath, check, severity, startRow, message }] } rows 1-based
  *   Either, when Theme Check itself fails: { error: { message } }
  *
- * Returns [{ path, check, severity, line, message }] with `line` 1-based. Throws with
- * a readable message when the JSON is a Theme Check error or a shape it doesn't know.
+ * Returns [{ path, check, severity, line, message }] with `line` 1-based, or null when
+ * an offense has no row (callers treat that as matching any changed line, so it isn't
+ * dropped). Throws with a readable message when the JSON is a Theme Check error or a
+ * shape it doesn't know.
  */
+const row = (value, offset) => (Number.isInteger(value) ? value + offset : null);
+
 export function readThemeCheckJson(data) {
   if (Array.isArray(data)) {
     return data.flatMap((file) =>
@@ -16,7 +20,7 @@ export function readThemeCheckJson(data) {
         path: file.path,
         check: o.check,
         severity: o.severity,
-        line: o.start_row + 1,
+        line: row(o.start_row, 1),
         message: o.message,
       }))
     );
@@ -26,7 +30,7 @@ export function readThemeCheckJson(data) {
       path: i.filePath,
       check: i.check,
       severity: i.severity,
-      line: i.startRow,
+      line: row(i.startRow, 0),
       message: i.message,
     }));
   }
