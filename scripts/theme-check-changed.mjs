@@ -20,6 +20,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { execSync } from 'node:child_process';
+import { readThemeCheckJson } from '../rules/theme-check-json.mjs';
 
 const args = process.argv.slice(2);
 // The theme-check JSON file is always the first positional arg (any name — the
@@ -87,17 +88,22 @@ try {
   process.exit(2);
 }
 
+let offenses;
+try {
+  offenses = readThemeCheckJson(data);
+} catch (err) {
+  console.error(`theme-check-changed: ${err.message}`);
+  process.exit(2);
+}
+
 const hits = [];
-for (const file of data) {
-  const abs = resolve(file.path);
+for (const o of offenses) {
+  const abs = resolve(o.path);
   const added = lineMode ? lineMap.get(abs) : lineMap.has(abs) ? true : null;
   if (!added) continue;
-  for (const o of file.offenses || []) {
-    if ((order[o.severity] ?? 9) > threshold) continue;
-    const lineNo = o.start_row + 1; // theme-check rows are 0-based
-    if (lineMode && !added.has(lineNo)) continue; // only offenses on added lines
-    hits.push({ path: file.path, ...o });
-  }
+  if ((order[o.severity] ?? 9) > threshold) continue;
+  if (lineMode && !added.has(o.line)) continue; // only offenses on added lines
+  hits.push(o);
 }
 
 if (hits.length === 0) {
@@ -107,7 +113,7 @@ if (hits.length === 0) {
 console.error(`theme-check: ✗ ${hits.length} introduced offense(s) at/above '${failLevel}'\n`);
 for (const h of hits) {
   console.error(
-    `  [${h.severity}] ${h.check}  ${h.path.replace(process.cwd(), '.')}:${h.start_row + 1}`
+    `  [${h.severity}] ${h.check}  ${h.path.replace(process.cwd(), '.')}:${h.line}`
   );
   console.error(`      ${h.message}`);
 }
