@@ -62,6 +62,19 @@ jobs:
             echo "No relevant changed files."
           fi
 
+      # Blocking: a builder PR keeps section CSS in a <style data-pc-preview-css> block
+      # while it's open, because Shopify never refreshes the {% stylesheet %} bundle on
+      # an existing preview theme. The builder moves it into {% stylesheet %} when the
+      # PR is approved; until then this step holds the merge.
+      - name: No preview CSS left (blocking)
+        run: |
+          LEFT=$(grep -rl --include='*.liquid' 'data-pc-preview-css' sections blocks snippets 2>/dev/null || true)
+          if [ -n "$LEFT" ]; then
+            echo "::error::Section CSS is still in a preview block in $(echo $LEFT | tr ' ' ','). Approve the PR and the builder moves it into {% stylesheet %} (pc-preview-css finalize); then this passes."
+            exit 1
+          fi
+          echo "No preview CSS blocks."
+
       # Visibility: report whole-repo legacy debt without failing the build.
       - name: pc-lint (whole repo — warn-only)
         run: npx --no-install pc-lint --warn
