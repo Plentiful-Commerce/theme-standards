@@ -70,8 +70,7 @@ jobs:
         run: |
           LEFT=$(grep -rl --include='*.liquid' 'data-pc-preview-css' sections blocks snippets 2>/dev/null || true)
           if [ -n "$LEFT" ]; then
-            echo "::error::Section CSS is still in a preview block. Approve the PR and the builder moves it into {% stylesheet %} (pc-preview-css finalize), then this passes:"
-            echo "$LEFT"
+            echo "::error::Section CSS is still in a preview block in $(echo $LEFT | tr ' ' ','). Approve the PR and the builder moves it into {% stylesheet %} (pc-preview-css finalize); then this passes."
             exit 1
           fi
           echo "No preview CSS blocks."
